@@ -67,8 +67,8 @@ export function Shell() {
       <TitleBar />
       <div className="flex min-h-0 flex-1">
         <Sidebar />
-        <main className="relative min-w-0 flex-1 overflow-y-auto bg-gradient-to-b from-surface-2 to-surface">
-          <div key={JSON.stringify(view)} className="p-6 pb-10">
+        <main className="relative min-w-0 flex-1 overflow-hidden bg-gradient-to-b from-surface-2 to-surface">
+          <div key={JSON.stringify(view)} className="h-full overflow-y-auto p-6 pb-10">
             <Content />
           </div>
           {showLyrics && <LyricsView />}
