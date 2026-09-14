@@ -15,6 +15,7 @@ win:
   icon: resources/icon.png
   artifactName: ${productName}-${version}-setup.${ext}
 linux:
+  maintainer: rene-roid <rene-roid@users.noreply.github.com>
   target:
     - AppImage
     - deb
