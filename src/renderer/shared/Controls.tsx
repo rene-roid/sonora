@@ -11,7 +11,7 @@ export function TransportControls({ size = 18, compact = false }: { size?: numbe
         <SkipBack size={size - 2} />
       </button>
       <button
-        className={`icon-btn ${compact ? 'h-8 w-8' : 'h-9 w-9'} bg-white text-black hover:bg-white/90 hover:text-black`}
+        className={`icon-btn ${compact ? 'h-7 w-7' : 'h-9 w-9'} bg-white text-black hover:bg-white/90 hover:text-black`}
         onClick={player.toggle}
         disabled={!hasTrack}
         title={playing ? 'Pause' : 'Play'}
