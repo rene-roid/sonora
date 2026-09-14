@@ -1,7 +1,6 @@
 import { app, ipcMain, shell, type IpcMainEvent } from 'electron'
 import {
   initialPlayerState,
-  pushRecent,
   type PlayerCommandName,
   type PlayerCommands,
   type PlayerEventName,
@@ -58,10 +57,6 @@ function applyEvent<K extends PlayerEventName>(event: K, payload: PlayerEvents[K
       playerState.index = p.index
       playerState.position = 0
       playerState.duration = p.track?.duration ?? 0
-      // Home's recent tiles: whatever actually plays, persisted in the user-data store.
-      const recents = getSettings().recents
-      const next = pushRecent(recents, p.track)
-      if (next !== recents) broadcast('settings:changed', [updateSettings({ recents: next })])
       break
     }
     case 'playStateChanged':

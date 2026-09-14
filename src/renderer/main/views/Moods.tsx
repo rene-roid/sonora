@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
+import { Play, Shuffle } from 'lucide-react'
 import type { AlbumID3 } from '@shared/subsonic/types'
 import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
+import { player } from '@renderer/shared/playerStore'
 import { AlbumCard, CardGrid, TagCard } from '../components/AlbumCard'
-import { Empty, ErrorBox, Loading, PageTitle, SearchInput } from '../components/ui'
+import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
 import { nav } from '../nav'
+import { recentOf, playFrom } from '../recents'
 import { useAsync, type AsyncState } from '../useAsync'
 
 /**
@@ -15,6 +18,8 @@ const useAlbums = (): AsyncState<AlbumID3[]> => {
   const client = useClient()
   return useAsync('albums:all', () => client?.getAllAlbums(), [client])
 }
+
+const moodRecent = (value: string) => recentOf({ name: 'mood', value }, capitalize(value), 'Mood')
 
 export function Moods() {
   const state = useAlbums()
@@ -55,6 +60,7 @@ export function Moods() {
 }
 
 export function MoodView({ value }: { value: string }) {
+  const client = useClient()
   const state = useAlbums()
   const [query, setQuery] = useState('')
 
@@ -65,6 +71,14 @@ export function MoodView({ value }: { value: string }) {
     return albums.filter((a) => `${a.name} ${a.artist ?? ''}`.toLowerCase().includes(q))
   }, [albums, query])
 
+  const playAll = async (shuffle: boolean): Promise<void> => {
+    if (!client) return
+    const songs = (await Promise.all(albums.map((a) => client.getAlbum(a.id)))).flatMap((a) => a.song)
+    if (!songs.length) return
+    player.setShuffle(shuffle)
+    playFrom(songs, shuffle ? Math.floor(Math.random() * songs.length) : 0, moodRecent(value))
+  }
+
   if (state.loading) return <Loading />
   if (state.error) return <ErrorBox message={state.error} onRetry={state.reload} />
 
@@ -74,6 +88,16 @@ export function MoodView({ value }: { value: string }) {
         eyebrow="Mood"
         title={capitalize(value)}
         subtitle={`${albums.length} album${albums.length === 1 ? '' : 's'}`}
+        actions={
+          <>
+            <PrimaryButton onClick={() => playAll(false)} disabled={!albums.length}>
+              <Play size={16} fill="currentColor" /> Play
+            </PrimaryButton>
+            <GhostButton onClick={() => playAll(true)} disabled={!albums.length}>
+              <Shuffle size={16} /> Shuffle
+            </GhostButton>
+          </>
+        }
       />
       <SearchInput value={query} onChange={setQuery} placeholder="Search in this mood" />
       {shown.length === 0 ? (

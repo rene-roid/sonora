@@ -5,6 +5,7 @@ import { player } from '@renderer/shared/playerStore'
 import { Cover } from '@renderer/shared/Cover'
 import { TrackList } from '../components/TrackList'
 import { ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton } from '../components/ui'
+import { recentOf, playFrom } from '../recents'
 import { useAsync } from '../useAsync'
 
 export function PlaylistView({ id }: { id: string }) {
@@ -17,6 +18,7 @@ export function PlaylistView({ id }: { id: string }) {
   const pl = state.data
   const songs = pl.entry
   const total = songs.reduce((s, t) => s + t.duration, 0)
+  const origin = recentOf({ name: 'playlist', id }, pl.name, 'Playlist', pl.coverArt ?? songs[0]?.coverArt)
 
   return (
     <div>
@@ -33,14 +35,14 @@ export function PlaylistView({ id }: { id: string }) {
         }
         actions={
           <>
-            <PrimaryButton onClick={() => player.setQueue(songs, 0, true)} disabled={!songs.length}>
+            <PrimaryButton onClick={() => playFrom(songs, 0, origin)} disabled={!songs.length}>
               <Play size={16} fill="currentColor" /> Play
             </PrimaryButton>
             <GhostButton
               disabled={!songs.length}
               onClick={() => {
                 player.setShuffle(true)
-                player.setQueue(songs, Math.floor(Math.random() * songs.length), true)
+                playFrom(songs, Math.floor(Math.random() * songs.length), origin)
               }}
             >
               <Shuffle size={16} /> Shuffle
@@ -50,6 +52,7 @@ export function PlaylistView({ id }: { id: string }) {
       />
       <TrackList
         tracks={songs}
+        origin={origin}
         removeLabel="Remove from this playlist"
         onRemove={async (i) => {
           if (!client) return

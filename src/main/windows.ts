@@ -12,6 +12,9 @@ export const MINI_SIZE = { width: 340, height: 112 }
 export const TOAST_SIZE = { width: 380, height: 112 }
 const EDGE = 12
 
+/** Windows/Linux: tool windows are skipped by the taskbar, alt-tab and window lists. */
+const OVERLAY_TYPE = process.platform === 'darwin' ? {} : ({ type: 'toolbar' } as const)
+
 export function getWindow(name: WindowName): BrowserWindow | undefined {
   const w = windows.get(name)
   return w && !w.isDestroyed() ? w : undefined
@@ -163,6 +166,7 @@ export function createToastWindow(): BrowserWindow {
   const win = new BrowserWindow({
     ...baseOptions('toast'),
     ...TOAST_SIZE,
+    ...OVERLAY_TYPE,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -235,6 +239,7 @@ export function createWidgetWindow(): BrowserWindow {
   const win = new BrowserWindow({
     ...baseOptions('widget'),
     ...WIDGET_SIZE,
+    ...OVERLAY_TYPE,
     x: a.x + a.width - WIDGET_SIZE.width - EDGE,
     y: a.y + a.height - WIDGET_SIZE.height - 6,
     frame: false,

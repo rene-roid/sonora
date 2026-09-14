@@ -1,9 +1,9 @@
 import { Play, Shuffle } from 'lucide-react'
 import { useClient } from '@renderer/shared/sessionStore'
-import { player } from '@renderer/shared/playerStore'
 import { Cover } from '@renderer/shared/Cover'
 import { AlbumCard, CardGrid } from '../components/AlbumCard'
 import { ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton } from '../components/ui'
+import { recentOf, playFrom } from '../recents'
 import { useAsync } from '../useAsync'
 
 export function ArtistView({ id }: { id: string }) {
@@ -18,7 +18,7 @@ export function ArtistView({ id }: { id: string }) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[songs[i], songs[j]] = [songs[j], songs[i]]
     }
-    player.setQueue(songs, 0, true)
+    playFrom(songs, 0, recentOf({ name: 'artist', id }, state.data.name, 'Artist', state.data.coverArt ?? id))
   }
 
   if (state.loading) return <Loading />

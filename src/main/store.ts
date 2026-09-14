@@ -18,7 +18,9 @@ export function getSettings(): Settings {
     ...defaultSettings,
     ...saved,
     widgets: { ...defaultSettings.widgets, ...(saved.widgets ?? {}) },
-    windowBounds: { ...(saved.windowBounds ?? {}) }
+    windowBounds: { ...(saved.windowBounds ?? {}) },
+    // Entries written before the shelf stored an origin have no key and cannot be played.
+    recents: (saved.recents ?? []).filter((r) => r?.key)
   }
 }
 

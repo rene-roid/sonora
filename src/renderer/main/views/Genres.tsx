@@ -3,19 +3,21 @@ import { Play } from 'lucide-react'
 import type { Genre } from '@shared/subsonic/types'
 import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
-import { player } from '@renderer/shared/playerStore'
 import { CardGrid, TagCard } from '../components/AlbumCard'
 import { TrackPage } from '../components/TrackPage'
 import { Empty, ErrorBox, Loading, PageTitle, SearchInput } from '../components/ui'
 import { nav } from '../nav'
+import { recentOf, playFrom } from '../recents'
 import { useAsync } from '../useAsync'
+
+const genreRecent = (value: string) => recentOf({ name: 'genre', value }, capitalize(value), 'Genre')
 
 function GenreCard({ genre }: { genre: Genre }) {
   const client = useClient()
   const play = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
     const songs = await client?.getSongsByGenre(genre.value)
-    if (songs?.length) player.setQueue(songs, 0, true)
+    if (songs?.length) playFrom(songs, 0, genreRecent(genre.value))
   }
   return (
     <TagCard
@@ -61,5 +63,5 @@ export function Genres() {
 export function GenreView({ value }: { value: string }) {
   const client = useClient()
   const state = useAsync(`genre:${value}`, () => client?.getSongsByGenre(value), [client, value])
-  return <TrackPage eyebrow="Genre" title={capitalize(value)} state={state} />
+  return <TrackPage eyebrow="Genre" title={capitalize(value)} state={state} origin={genreRecent(value)} />
 }

@@ -1,9 +1,10 @@
-import { Play } from 'lucide-react'
+import { Play, Shuffle } from 'lucide-react'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
 import { AlbumCard, ArtistCard, CardGrid } from '../components/AlbumCard'
 import { TrackList } from '../components/TrackList'
-import { Empty, ErrorBox, Loading, PageTitle, PrimaryButton, SectionHeader } from '../components/ui'
+import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SectionHeader } from '../components/ui'
+import { playFrom } from '../recents'
 import { useAsync } from '../useAsync'
 
 export function Favorites() {
@@ -21,9 +22,19 @@ export function Favorites() {
         subtitle="Songs, albums and artists you starred in Navidrome"
         actions={
           r.songs.length ? (
-            <PrimaryButton onClick={() => player.setQueue(r.songs, 0, true)}>
-              <Play size={16} fill="currentColor" /> Play songs
-            </PrimaryButton>
+            <>
+              <PrimaryButton onClick={() => playFrom(r.songs, 0, null)}>
+                <Play size={16} fill="currentColor" /> Play
+              </PrimaryButton>
+              <GhostButton
+                onClick={() => {
+                  player.setShuffle(true)
+                  playFrom(r.songs, Math.floor(Math.random() * r.songs.length), null)
+                }}
+              >
+                <Shuffle size={16} /> Shuffle
+              </GhostButton>
+            </>
           ) : undefined
         }
       />
@@ -31,7 +42,7 @@ export function Favorites() {
       {r.songs.length > 0 && (
         <section className="mb-8">
           <SectionHeader title="Songs" />
-          <TrackList tracks={r.songs} />
+          <TrackList tracks={r.songs} origin={null} />
         </section>
       )}
       {r.albums.length > 0 && (
