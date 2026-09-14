@@ -1,7 +1,7 @@
 {
   "name": "sonora",
   "productName": "Sonora",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A Spotify-like desktop client for Navidrome with synced lyrics, Fluent toasts, a mini-player and a taskbar-area visualizer widget.",
   "main": "./out/main/index.js",
   "author": "Sonora",
