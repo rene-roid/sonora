@@ -10,6 +10,7 @@ import type {
   Track,
   WindowName
 } from '@shared/types'
+import type { ServerProbe } from '@shared/subsonic/client'
 
 const windowName = ((): WindowName => {
   const arg = process.argv.find((a) => a.startsWith('--sonora-window='))
@@ -67,6 +68,19 @@ const api = {
     },
     logout(): Promise<void> {
       return ipcRenderer.invoke('auth:logout')
+    },
+    /** Replace the alternate-URL list for the current library; re-picks the best one. */
+    setServers(servers: string[]): Promise<Session | null> {
+      return ipcRenderer.invoke('auth:setServers', servers)
+    },
+    selectServer(server: string): Promise<Session | null> {
+      return ipcRenderer.invoke('auth:selectServer', server)
+    },
+    reselect(): Promise<Session | null> {
+      return ipcRenderer.invoke('auth:reselect')
+    },
+    probe(): Promise<ServerProbe[]> {
+      return ipcRenderer.invoke('auth:probe')
     },
     onChange(cb: (session: Session | null) => void): Unsubscribe {
       return subscribe('auth:changed', cb)

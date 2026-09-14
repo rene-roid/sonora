@@ -88,7 +88,10 @@ export interface PlayerCommands {
 export type PlayerCommandName = keyof PlayerCommands
 
 export interface Session {
+  /** The candidate currently in use; always a member of `servers`. */
   server: string
+  /** Every URL that points at this same library (LAN, VPN, public). Fastest reachable one wins. */
+  servers?: string[]
   username: string
   /** md5(password + salt). The raw password is never persisted. */
   token: string

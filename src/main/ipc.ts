@@ -9,7 +9,14 @@ import {
   type Session,
   type Settings
 } from '@shared/types'
-import { SubsonicClient, credentialsFromPassword, normalizeServerUrl } from '@shared/subsonic/client'
+import {
+  SubsonicClient,
+  credentialsFromPassword,
+  normalizeServerUrl,
+  pickFastestServer,
+  probeServers,
+  type ServerProbe
+} from '@shared/subsonic/client'
 import { clearSession, loadSession, saveSession } from './credentials'
 import { getSettings, updateSettings } from './store'
 import {
@@ -91,6 +98,26 @@ export function sendCommand<K extends PlayerCommandName>(cmd: K, payload?: Playe
   host.webContents.send('player:command', cmd, payload)
 }
 
+/** Persist a new active server and tell every window, but only when it actually changed. */
+function activate(session: Session, server: string): Session {
+  if (server === session.server) return session
+  const next: Session = { ...session, server }
+  saveSession(next)
+  broadcast('auth:changed', [next])
+  return next
+}
+
+/** Ping all candidates and switch to whichever answers first. Keeps the current pick if none do. */
+async function reselect(): Promise<Session | null> {
+  const session = loadSession()
+  if (!session || (session.servers?.length ?? 0) < 2) return session
+  try {
+    return activate(session, await pickFastestServer(session, session.servers!))
+  } catch {
+    return session // nothing answered; leave the pick alone so a flaky network is not destructive
+  }
+}
+
 export function setupIpc(): void {
   // ---- player event bus -----------------------------------------------------
   ipcMain.on('player:emit', (e: IpcMainEvent, event: PlayerEventName, payload: unknown) => {
@@ -126,7 +153,12 @@ export function setupIpc(): void {
     'auth:login',
     async (_e, input: { server: string; username: string; password: string }): Promise<Session> => {
       const server = normalizeServerUrl(input.server)
-      const session: Session = { server, username: input.username.trim(), ...credentialsFromPassword(input.password) }
+      const session: Session = {
+        server,
+        servers: [server],
+        username: input.username.trim(),
+        ...credentialsFromPassword(input.password)
+      }
       const client = new SubsonicClient(session)
       await client.ping() // throws SubsonicError on bad credentials / unreachable server
       saveSession(session)
@@ -134,6 +166,31 @@ export function setupIpc(): void {
       return session
     }
   )
+
+  /** Replace the candidate URL list, then re-pick the best one. */
+  ipcMain.handle('auth:setServers', async (_e, urls: string[]): Promise<Session | null> => {
+    const session = loadSession()
+    if (!session) return null
+    const servers = [...new Set(urls.map(normalizeServerUrl).filter(Boolean))]
+    if (servers.length === 0) return session
+    const next: Session = { ...session, servers, server: servers.includes(session.server) ? session.server : servers[0] }
+    saveSession(next)
+    broadcast('auth:changed', [next])
+    return (await reselect()) ?? next
+  })
+
+  /** Pin a specific candidate; also how the renderer reports a failover it already performed. */
+  ipcMain.handle('auth:selectServer', (_e, server: string): Session | null => {
+    const session = loadSession()
+    return session ? activate(session, normalizeServerUrl(server)) : null
+  })
+
+  ipcMain.handle('auth:reselect', (): Promise<Session | null> => reselect())
+
+  ipcMain.handle('auth:probe', async (): Promise<ServerProbe[]> => {
+    const session = loadSession()
+    return session ? probeServers(session, session.servers ?? [session.server]) : []
+  })
 
   ipcMain.handle('auth:logout', () => {
     clearSession()

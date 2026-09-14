@@ -40,9 +40,21 @@ host.onFramesWanted((wanted) => engine.setFramesWanted(wanted))
 async function boot(): Promise<void> {
   const s = await settings.get()
 
+  let active: string | null = null
   const applySession = (session: Session | null): void => {
+    active = session?.server ?? null
     engine.setClient(session ? new SubsonicClient(session) : null)
     log(session ? `session for ${session.username}@${session.server}` : 'no session')
+  }
+
+  // Playback died: ask main to re-race the alternate URLs, and report back whether we moved.
+  engine.recover = async () => {
+    const before = active
+    const next = await auth.reselect()
+    if (!next || next.server === before) return false
+    applySession(next)
+    log(`failed over to ${next.server}`)
+    return true
   }
   // The client has to exist before restore(), which loads the saved queue paused at its last position.
   applySession(await auth.getSession())

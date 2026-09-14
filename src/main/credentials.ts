@@ -7,6 +7,11 @@ import type { Session } from '@shared/types'
  * libsecret on Linux). Only the derived Subsonic token + salt are stored, never the password.
  */
 
+/** Keep the candidate list a deduped superset that always contains the active server. */
+function withServers(s: Session): Session {
+  return { ...s, servers: [...new Set([s.server, ...(s.servers ?? [])])] }
+}
+
 export function loadSession(): Session | null {
   const rec = store.get('credentials')
   if (!rec) return null
@@ -16,7 +21,7 @@ export function loadSession(): Session | null {
       : Buffer.from(rec.data, 'base64').toString('utf8')
     const s = JSON.parse(json) as Session
     if (!s.server || !s.username || !s.token || !s.salt) return null
-    return s
+    return withServers(s)
   } catch (err) {
     console.error('[credentials] failed to read session', err)
     return null
@@ -24,7 +29,7 @@ export function loadSession(): Session | null {
 }
 
 export function saveSession(session: Session): void {
-  const json = JSON.stringify(session)
+  const json = JSON.stringify(withServers(session))
   if (safeStorage.isEncryptionAvailable()) {
     store.set('credentials', { encrypted: true, data: safeStorage.encryptString(json).toString('base64') })
   } else {

@@ -84,13 +84,30 @@ export function childToTrack(c: Child): Track {
 }
 
 type Params = Record<string, string | number | boolean | undefined | null>
+type Fetch = (url: string, init?: RequestInit) => Promise<Response>
 
 export class SubsonicClient {
+  /** Currently used candidate. Failover moves it without rebuilding the client. */
+  private active: string
+  /** Shared in-flight failover race, so N concurrent failures cause one round of pings. */
+  private switching?: Promise<string>
+
   constructor(
     public readonly session: Session,
-    private readonly fetchImpl: (url: string, init?: RequestInit) => Promise<Response> = (url, init) =>
-      globalThis.fetch(url, init)
-  ) {}
+    private readonly fetchImpl: Fetch = (url, init) => globalThis.fetch(url, init),
+    /** Called when failover changes the active server, so main can persist the new pick. */
+    private readonly onServerSwitch?: (server: string) => void
+  ) {
+    this.active = session.server
+  }
+
+  get server(): string {
+    return this.active
+  }
+
+  private get candidates(): string[] {
+    return this.session.servers?.length ? this.session.servers : [this.session.server]
+  }
 
   private authParams(): URLSearchParams {
     const p = new URLSearchParams()
@@ -109,11 +126,40 @@ export class SubsonicClient {
       if (v === undefined || v === null || v === '') continue
       p.set(k, String(v))
     }
-    return `${this.session.server}/rest/${method}?${p.toString()}`
+    return `${this.active}/rest/${method}?${p.toString()}`
   }
 
-  async call<T>(method: string, params: Params = {}): Promise<T> {
-    const res = await this.fetchImpl(this.url(method, params))
+  /**
+   * After a network-level failure, re-race the other candidates and adopt the winner.
+   * Resolves undefined when there is nothing better to switch to.
+   */
+  private async switchServer(): Promise<string | undefined> {
+    const others = this.candidates.filter((s) => s !== this.active)
+    if (others.length === 0) return undefined
+    const race = (this.switching ??= pickFastestServer(this.session, others, this.fetchImpl).finally(() => {
+      this.switching = undefined
+    }))
+    try {
+      const next = await race
+      if (next !== this.active) {
+        this.active = next
+        this.onServerSwitch?.(next)
+      }
+      return next
+    } catch {
+      return undefined // every candidate is down too; report the original failure
+    }
+  }
+
+  async call<T>(method: string, params: Params = {}, init?: RequestInit): Promise<T> {
+    let res: Response
+    try {
+      res = await this.fetchImpl(this.url(method, params), init)
+    } catch (err) {
+      // ping is the probe itself, and its init carries a spent AbortSignal, so never retry it.
+      if (method === 'ping' || !(await this.switchServer())) throw err
+      res = await this.fetchImpl(this.url(method, params), init)
+    }
     if (!res.ok) throw new SubsonicError(`HTTP ${res.status} ${res.statusText} calling ${method}`)
     const json = (await res.json()) as SubsonicEnvelope<T>
     const body = json['subsonic-response']
@@ -126,8 +172,9 @@ export class SubsonicClient {
 
   // ---- system -------------------------------------------------------------
 
-  ping(): Promise<PingResponse> {
-    return this.call<PingResponse>('ping')
+  /** Times out rather than hanging, so callers can treat a dead server as "down" promptly. */
+  ping(timeoutMs = 8000): Promise<PingResponse> {
+    return this.call<PingResponse>('ping', {}, { signal: AbortSignal.timeout(timeoutMs) })
   }
 
   // ---- browsing ------------------------------------------------------------
@@ -258,4 +305,47 @@ export class SubsonicClient {
   downloadUrl(id: string): string {
     return this.url('download', { id })
   }
+}
+
+export interface ServerProbe {
+  server: string
+  ok: boolean
+  /** Round-trip time of the ping, in milliseconds. */
+  ms: number
+  error?: string
+}
+
+/** Ping every candidate at once; the first to answer wins. Rejects when all of them fail. */
+export function pickFastestServer(
+  session: Session,
+  servers: string[],
+  fetchImpl?: Fetch,
+  timeoutMs = 5000
+): Promise<string> {
+  return Promise.any(
+    servers.map(async (server) => {
+      await new SubsonicClient({ ...session, server }, fetchImpl).ping(timeoutMs)
+      return server
+    })
+  )
+}
+
+/** Like pickFastestServer, but waits for every candidate and reports each result, for the UI. */
+export function probeServers(
+  session: Session,
+  servers: string[],
+  fetchImpl?: Fetch,
+  timeoutMs = 5000
+): Promise<ServerProbe[]> {
+  return Promise.all(
+    servers.map(async (server) => {
+      const started = Date.now()
+      try {
+        await new SubsonicClient({ ...session, server }, fetchImpl).ping(timeoutMs)
+        return { server, ok: true, ms: Date.now() - started }
+      } catch (err) {
+        return { server, ok: false, ms: Date.now() - started, error: (err as Error).message }
+      }
+    })
+  )
 }

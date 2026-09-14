@@ -1,7 +1,114 @@
-import { useEffect, useState } from 'react'
-import type { Settings } from '@shared/types'
+import { useCallback, useEffect, useState } from 'react'
+import { X } from 'lucide-react'
+import type { Session, Settings } from '@shared/types'
+import type { ServerProbe } from '@shared/subsonic/client'
 import { useSessionStore, useSettings } from '@renderer/shared/sessionStore'
-import { GhostButton, PageTitle, SectionHeader } from '../components/ui'
+import { GhostButton, PageTitle, SectionHeader, Spinner } from '../components/ui'
+
+const field =
+  'w-full rounded-md border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-ink outline-none transition focus:border-accent focus:bg-white/[0.08]'
+
+/**
+ * Alternate URLs for the same library (LAN, VPN, public). Sonora pings them all and uses
+ * whichever answers first, switching automatically when the one in use stops responding.
+ */
+function Connections({ session }: { session: Session }) {
+  const servers = session.servers ?? [session.server]
+  const [probes, setProbes] = useState<ServerProbe[]>()
+  const [busy, setBusy] = useState(false)
+  const [url, setUrl] = useState('')
+
+  const test = useCallback(async (): Promise<void> => {
+    setBusy(true)
+    try {
+      setProbes(await window.sonora.auth.probe())
+    } finally {
+      setBusy(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void test()
+  }, [test, session.servers?.join(',')])
+
+  const save = async (next: string[]): Promise<void> => {
+    await window.sonora.auth.setServers(next)
+    void test()
+  }
+
+  return (
+    <section className="mb-8">
+      <SectionHeader
+        title="Connections"
+        action={
+          <div className="flex items-center gap-2">
+            {busy && <Spinner className="h-4 w-4" />}
+            <GhostButton onClick={() => void window.sonora.auth.reselect().then(test)} disabled={busy}>
+              Use fastest
+            </GhostButton>
+          </div>
+        }
+      />
+      <p className="mb-3 px-3 text-xs text-ink-3">
+        Several addresses for the same server. The fastest one that answers is used, and Sonora switches over on its
+        own when it stops responding.
+      </p>
+      <ul className="mb-3">
+        {servers.map((s) => {
+          const probe = probes?.find((p) => p.server === s)
+          const active = s === session.server
+          return (
+            <li key={s} className="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-white/[0.04]">
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${
+                  probe === undefined ? 'bg-white/25' : probe.ok ? 'bg-emerald-400' : 'bg-red-400'
+                }`}
+                title={probe?.error ?? (probe?.ok ? 'Reachable' : undefined)}
+              />
+              <span className={`min-w-0 flex-1 truncate text-sm ${active ? 'font-semibold' : 'text-ink-2'}`}>{s}</span>
+              {probe?.ok && <span className="shrink-0 text-xs text-ink-3">{probe.ms} ms</span>}
+              {active ? (
+                <span className="shrink-0 text-xs font-semibold text-accent">In use</span>
+              ) : (
+                <button
+                  className="shrink-0 text-xs text-ink-2 hover:text-ink"
+                  onClick={() => void window.sonora.auth.selectServer(s)}
+                >
+                  Use
+                </button>
+              )}
+              <button
+                className="shrink-0 rounded p-1 text-ink-3 hover:bg-white/10 hover:text-ink disabled:opacity-30"
+                title="Remove"
+                disabled={servers.length < 2}
+                onClick={() => void save(servers.filter((x) => x !== s))}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      <form
+        className="flex items-center gap-2 px-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (!url.trim()) return
+          void save([...servers, url])
+          setUrl('')
+        }}
+      >
+        <input
+          className={field}
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://music.example.com"
+        />
+        <GhostButton disabled={!url.trim()}>Add</GhostButton>
+      </form>
+    </section>
+  )
+}
 
 function Toggle({
   label,
@@ -114,6 +221,8 @@ export function SettingsView() {
           onChange={(v) => update({ autoLaunch: v })}
         />
       </section>
+
+      {session && <Connections session={session} />}
 
       <section className="mb-8">
         <SectionHeader title="Account" />

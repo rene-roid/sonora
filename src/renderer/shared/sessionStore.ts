@@ -25,11 +25,21 @@ export function initSessionBridge(): void {
   initialised = true
   const set = useSessionStore.setState
   const apply = (session: Session | null): void => {
-    setCacheScope(session ? `${session.server}|${session.username}` : '')
-    set({ loaded: true, session, client: session ? new SubsonicClient(session) : null })
+    // Scoped to the first candidate, not the active one, so failing over keeps the cached views warm.
+    setCacheScope(session ? `${session.servers?.[0] ?? session.server}|${session.username}` : '')
+    set({
+      loaded: true,
+      session,
+      // A failover inside the client is reported back so main persists the new active server.
+      client: session ? new SubsonicClient(session, undefined, (s) => void window.sonora.auth.selectServer(s)) : null
+    })
   }
 
-  void window.sonora.auth.getSession().then(apply)
+  void window.sonora.auth.getSession().then((session) => {
+    apply(session)
+    // More than one candidate URL: find the quickest one now rather than on the first failure.
+    if ((session?.servers?.length ?? 0) > 1) void window.sonora.auth.reselect()
+  })
   window.sonora.auth.onChange(apply)
   void window.sonora.settings.get().then((settings) => set({ settings }))
   window.sonora.settings.onChange((settings) => set({ settings }))

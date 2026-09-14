@@ -1,10 +1,62 @@
 import { Disc3, Heart, Home, ListMusic, Mic2, Settings, Tags } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import type { SubsonicClient } from '@shared/subsonic/client'
 import { useClient, useSessionStore } from '@renderer/shared/sessionStore'
 import { nav, useNav, type View } from './nav'
 import { useAsync } from './useAsync'
 
-function NavItem({ view, icon, label }: { view: View; icon: ReactNode; label: string }) {
+/** How often the server is pinged to refresh the connectivity dot. */
+const PING_MS = 30_000
+
+/** true = server answered, false = unreachable, undefined = not checked yet. */
+function useServerStatus(client: SubsonicClient | null): boolean | undefined {
+  const [ok, setOk] = useState<boolean>()
+
+  useEffect(() => {
+    setOk(undefined)
+    if (!client) return
+    let cancelled = false
+    const check = (): void => {
+      void client.ping().then(
+        () => !cancelled && setOk(true),
+        () => !cancelled && setOk(false)
+      )
+    }
+    const offline = (): void => setOk(false)
+    check()
+    const id = setInterval(check, PING_MS)
+    window.addEventListener('online', check)
+    window.addEventListener('offline', offline)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+      window.removeEventListener('online', check)
+      window.removeEventListener('offline', offline)
+    }
+  }, [client])
+
+  return ok
+}
+
+function StatusDot({ ok }: { ok: boolean | undefined }) {
+  const label = ok === undefined ? 'Checking server…' : ok ? 'Connected' : 'Server unreachable'
+  return (
+    <span className="group/dot relative flex items-center">
+      <span
+        aria-label={label}
+        role="status"
+        className={`h-2 w-2 shrink-0 rounded-full ${
+          ok === undefined ? 'bg-white/40' : ok ? 'bg-green-400' : 'bg-red-400'
+        }`}
+      />
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden max-w-[200px] -translate-x-1/2 truncate rounded-md border border-stroke bg-surface-3 px-2 py-1 text-[11px] whitespace-nowrap text-ink shadow-lg group-hover/dot:block">
+        {label}
+      </span>
+    </span>
+  )
+}
+
+function NavItem({ view, icon, before, label }: { view: View; icon: ReactNode; before?: ReactNode; label: string }) {
   const current = useNav((s) => s.view)
   const active =
     current.name === view.name && (view.name !== 'playlist' || (current as { id?: string }).id === (view as { id?: string }).id)
@@ -16,7 +68,10 @@ function NavItem({ view, icon, label }: { view: View; icon: ReactNode; label: st
       }`}
     >
       <span className="shrink-0">{icon}</span>
-      <span className="truncate">{label}</span>
+      <span className="flex min-w-0 items-center gap-2">
+        {before}
+        <span className="truncate">{label}</span>
+      </span>
     </button>
   )
 }
@@ -25,6 +80,7 @@ export function Sidebar() {
   const client = useClient()
   const session = useSessionStore((s) => s.session)
   const playlists = useAsync('playlists', () => client?.getPlaylists(), [client])
+  const online = useServerStatus(client)
 
   return (
     <aside className="flex w-[232px] shrink-0 flex-col border-r border-stroke bg-surface">
@@ -56,7 +112,12 @@ export function Sidebar() {
         ))}
       </div>
       <div className="border-t border-stroke p-2">
-        <NavItem view={{ name: 'settings' }} icon={<Settings size={16} />} label={session?.username ?? 'Settings'} />
+        <NavItem
+          view={{ name: 'settings' }}
+          icon={<Settings size={16} />}
+          before={<StatusDot ok={online} />}
+          label={session?.username ?? 'Settings'}
+        />
       </div>
     </aside>
   )

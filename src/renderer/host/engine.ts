@@ -66,17 +66,34 @@ export class AudioEngine {
       this.consecutiveErrors = 0
     })
     a.addEventListener('timeupdate', () => this.maybeScrobble())
-    a.addEventListener('error', () => {
-      const code = a.error?.code
-      const track = this.current
-      this.emit('error', { message: `Playback error${code ? ` (code ${code})` : ''}: ${track?.title ?? 'unknown track'}` })
-      this.consecutiveErrors += 1
-      if (this.consecutiveErrors < Math.min(this.queue.length, 5)) {
-        window.setTimeout(() => this.next(true), 400)
-      } else {
-        this.emit('playStateChanged', { playing: false })
-      }
-    })
+    a.addEventListener('error', () => void this.onAudioError())
+  }
+
+  /**
+   * Asked to find a healthier server on the first playback error of a streak. Returns true when it
+   * switched, in which case the current track is reloaded from the new one instead of being skipped.
+   */
+  recover?: () => Promise<boolean>
+
+  private async onAudioError(): Promise<void> {
+    const a = this.audio
+    const code = a.error?.code
+    const track = this.current
+    const at = Number.isFinite(a.currentTime) ? a.currentTime : 0
+    const wasPlaying = !a.paused
+    this.consecutiveErrors += 1
+    // A server that dropped off the network errors on every track, so retry the same one elsewhere
+    // before burning through the queue.
+    if (this.consecutiveErrors === 1 && this.recover && (await this.recover())) {
+      this.load(this.index, wasPlaying, at)
+      return
+    }
+    this.emit('error', { message: `Playback error${code ? ` (code ${code})` : ''}: ${track?.title ?? 'unknown track'}` })
+    if (this.consecutiveErrors < Math.min(this.queue.length, 5)) {
+      window.setTimeout(() => this.next(true), 400)
+    } else {
+      this.emit('playStateChanged', { playing: false })
+    }
   }
 
   // ---- wiring ---------------------------------------------------------------
