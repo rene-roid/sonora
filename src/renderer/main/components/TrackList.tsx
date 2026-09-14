@@ -13,12 +13,13 @@ import {
   Trash2,
   Volume2
 } from 'lucide-react'
-import type { Track } from '@shared/types'
+import type { RecentItem, Track } from '@shared/types'
 import { formatTime } from '@shared/format'
 import { Cover } from '@renderer/shared/Cover'
 import { player, usePlayerState } from '@renderer/shared/playerStore'
 import { useClient } from '@renderer/shared/sessionStore'
 import { nav } from '../nav'
+import { playFrom } from '../recents'
 import { useAsync } from '../useAsync'
 import { ContextMenu, MenuItem, MenuLabel, MenuSeparator, useContextMenu } from './ContextMenu'
 
@@ -29,7 +30,8 @@ export function TrackList({
   numbered = false,
   discs = false,
   onRemove,
-  removeLabel = 'Remove'
+  removeLabel = 'Remove',
+  origin
 }: {
   tracks: Track[]
   showAlbum?: boolean
@@ -40,6 +42,8 @@ export function TrackList({
   /** Given, the context menu offers a removal entry for the row at `index`. */
   onRemove?: (index: number) => void
   removeLabel?: string
+  /** The page these rows belong to, for Home's shelf. Omitted, a row counts as a song on its own. */
+  origin?: RecentItem | null
 }) {
   const currentId = usePlayerState((s) => s.track?.id)
   const playing = usePlayerState((s) => s.playing)
@@ -81,7 +85,7 @@ export function TrackList({
         const row = (
           <div
             key={`${t.id}-${i}`}
-            onDoubleClick={() => player.setQueue(tracks, i, true)}
+            onDoubleClick={() => playFrom(tracks, i, origin)}
             onContextMenu={(e) => {
               setMenuIndex(i)
               menu.open(e)
@@ -94,7 +98,7 @@ export function TrackList({
               <span className="group-hover:hidden">
                 {isCurrent && playing ? <Volume2 size={14} className="text-accent" /> : numbered ? (t.track ?? i + 1) : i + 1}
               </span>
-              <button className="hidden text-ink group-hover:block" onClick={() => player.setQueue(tracks, i, true)} title="Play">
+              <button className="hidden text-ink group-hover:block" onClick={() => playFrom(tracks, i, origin)} title="Play">
                 <Play size={14} fill="currentColor" />
               </button>
             </div>
@@ -169,7 +173,7 @@ export function TrackList({
           track={tracks[menuIndex]}
           starred={isStarred(tracks[menuIndex])}
           onClose={menu.close}
-          onPlay={() => player.setQueue(tracks, menuIndex, true)}
+          onPlay={() => playFrom(tracks, menuIndex, origin)}
           onToggleStar={() => void toggleStar(tracks[menuIndex])}
           onRemove={onRemove && (() => onRemove(menuIndex))}
           removeLabel={removeLabel}

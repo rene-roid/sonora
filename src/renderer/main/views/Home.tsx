@@ -1,10 +1,10 @@
 import { Heart, Shuffle } from 'lucide-react'
 import { useClient, useSettings } from '@renderer/shared/sessionStore'
-import { player } from '@renderer/shared/playerStore'
 import { Cover } from '@renderer/shared/Cover'
 import { AlbumCard, CardGrid, Tile, TileGrid, gradient } from '../components/AlbumCard'
 import { ErrorBox, Loading, PrimaryButton, SectionHeader } from '../components/ui'
 import { MixRow } from './Mixes'
+import { loadRecent, playFrom } from '../recents'
 import { useAsync } from '../useAsync'
 import type { AlbumListType } from '@shared/subsonic/types'
 
@@ -33,6 +33,7 @@ function RecentGrid() {
           title="Liked Songs"
           view={{ name: 'favorites' }}
           load={async (c) => (await c.getStarred2()).songs}
+          recent={null}
           art={
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-400 to-purple-700">
               <Heart size={24} fill="currentColor" />
@@ -41,10 +42,11 @@ function RecentGrid() {
         />
         {items.map((it) => (
           <Tile
-            key={it.id}
+            key={it.key}
             title={it.title}
-            view={{ name: 'album', id: it.id }}
-            load={async (c) => (await c.getAlbum(it.id)).song}
+            view={it.view}
+            load={(c) => loadRecent(c, it)}
+            recent={it}
             art={
               it.coverArt ? (
                 <Cover id={it.coverArt} size={160} className="h-full w-full" rounded="rounded-none" />
@@ -70,7 +72,7 @@ export function Home() {
         <PrimaryButton
           onClick={async () => {
             if (!client) return
-            player.setQueue(await client.getRandomSongs(50), 0, true)
+            playFrom(await client.getRandomSongs(50))
           }}
         >
           <Shuffle size={16} /> Shuffle library

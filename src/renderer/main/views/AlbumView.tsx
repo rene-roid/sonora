@@ -11,6 +11,7 @@ import { TrackList } from '../components/TrackList'
 import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
 import { useAsync } from '../useAsync'
 import { nav } from '../nav'
+import { albumRecent, playFrom } from '../recents'
 
 /**
  * One album, or several albums of a split release stitched into one. Tracks keep their own disc
@@ -40,6 +41,7 @@ export function AlbumView({ id, discIds }: { id: string; discIds?: string[] }) {
   if (!state.data) return null
   const album = state.data
   const songs = album.song
+  const origin = albumRecent(album, discIds)
   const total = songs.reduce((s, t) => s + t.duration, 0)
 
   return (
@@ -63,13 +65,13 @@ export function AlbumView({ id, discIds }: { id: string; discIds?: string[] }) {
         }
         actions={
           <>
-            <PrimaryButton onClick={() => player.setQueue(songs, 0, true)}>
+            <PrimaryButton onClick={() => playFrom(songs, 0, origin)}>
               <Play size={16} fill="currentColor" /> Play
             </PrimaryButton>
             <GhostButton
               onClick={() => {
                 player.setShuffle(true)
-                player.setQueue(songs, Math.floor(Math.random() * songs.length), true)
+                playFrom(songs, Math.floor(Math.random() * songs.length), origin)
               }}
             >
               <Shuffle size={16} /> Shuffle
@@ -84,7 +86,7 @@ export function AlbumView({ id, discIds }: { id: string; discIds?: string[] }) {
       {shown.length === 0 ? (
         <Empty>No songs match</Empty>
       ) : (
-        <TrackList tracks={shown} showAlbum={false} showCover={false} numbered discs />
+        <TrackList tracks={shown} showAlbum={false} showCover={false} numbered discs origin={origin} />
       )}
     </div>
   )

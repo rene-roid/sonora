@@ -132,26 +132,51 @@ export function sanitizeResume(r: ResumeState | null | undefined): ResumeState |
   return { queue: r.queue, index, position }
 }
 
-/** An album the user listened to, as shown by Home's recent tiles. */
-export interface RecentAlbum {
-  id: string
+/** Every navigable page of the main window. Lives here because `recents` persists it. */
+export type View =
+  | { name: 'home' }
+  | { name: 'albums' }
+  | { name: 'soundtracks' }
+  | { name: 'artists' }
+  | { name: 'genres' }
+  | { name: 'genre'; value: string }
+  | { name: 'moods' }
+  | { name: 'mood'; value: string }
+  | { name: 'mix'; value: string }
+  | { name: 'artist'; id: string }
+  /** `discIds` are sibling albums holding the other discs of the same release, in disc order. */
+  | { name: 'album'; id: string; discIds?: string[] }
+  | { name: 'playlist'; id: string }
+  | { name: 'search'; query: string }
+  | { name: 'favorites' }
+  | { name: 'settings' }
+
+/** Identity of a view, for deduping the shelf. */
+export function viewKey(v: View): string {
+  return 'id' in v ? `${v.name}:${v.id}` : 'value' in v ? `${v.name}:${v.value}` : v.name
+}
+
+/**
+ * A tile on Home's "jump back in" shelf: the album, artist, playlist, genre or mix the user
+ * started a play from, or the song itself when it was played on its own.
+ */
+export interface RecentItem {
+  /** `viewKey(view)`, or `track:<id>` for a lone song. */
+  key: string
   title: string
-  artist?: string
+  subtitle?: string
   coverArt?: string
+  /** The place played from. Absent for a lone song, which `track` holds instead. */
+  view?: View
+  track?: Track
 }
 
 const RECENTS_LIMIT = 7
 
-/** Play history, newest first, deduped and capped. Returns `items` untouched when nothing changed. */
-export function pushRecent(items: RecentAlbum[], track: Track | null | undefined): RecentAlbum[] {
-  if (!track?.albumId || items[0]?.id === track.albumId) return items
-  const item: RecentAlbum = {
-    id: track.albumId,
-    title: track.album,
-    artist: track.artist,
-    coverArt: track.coverArt
-  }
-  return [item, ...items.filter((i) => i.id !== item.id)].slice(0, RECENTS_LIMIT)
+/** Shelf entries, newest first, deduped and capped. Returns `items` untouched when nothing changed. */
+export function pushRecent(items: RecentItem[], item: RecentItem | null | undefined): RecentItem[] {
+  if (!item || items[0]?.key === item.key) return items
+  return [item, ...items.filter((i) => i.key !== item.key)].slice(0, RECENTS_LIMIT)
 }
 
 export type WindowName = 'main' | 'host' | 'toast' | 'mini' | 'widget'
@@ -178,8 +203,8 @@ export interface Settings {
   windowBounds: Partial<Record<WindowName, Rect>>
   /** Queue and playback position saved on quit so the next launch picks up where it left off. */
   resume: ResumeState | null
-  /** Albums played recently, newest first; Home's recent tiles. Cleared when the account changes. */
-  recents: RecentAlbum[]
+  /** Where the user played from recently, newest first; Home's shelf. Cleared when the account changes. */
+  recents: RecentItem[]
 }
 
 export const defaultSettings: Settings = {

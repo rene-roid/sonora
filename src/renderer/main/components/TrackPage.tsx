@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Play, Shuffle } from 'lucide-react'
-import type { Track } from '@shared/types'
+import type { RecentItem, Track } from '@shared/types'
 import { filterTracks, formatDuration } from '@shared/format'
 import { player } from '@renderer/shared/playerStore'
+import { playFrom } from '../recents'
 import type { AsyncState } from '../useAsync'
 import { TrackList } from './TrackList'
 import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from './ui'
@@ -11,11 +12,14 @@ import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, Search
 export function TrackPage({
   eyebrow,
   title,
-  state
+  state,
+  origin
 }: {
   eyebrow: string
   title: string
   state: AsyncState<Track[]>
+  /** This page, for Home's shelf: playing anything here counts as playing the genre or mix. */
+  origin: RecentItem
 }) {
   const [query, setQuery] = useState('')
   const songs = state.data
@@ -34,14 +38,14 @@ export function TrackPage({
         subtitle={`${songs.length} song${songs.length === 1 ? '' : 's'}, ${formatDuration(total)}`}
         actions={
           <>
-            <PrimaryButton onClick={() => player.setQueue(songs, 0, true)} disabled={!songs.length}>
+            <PrimaryButton onClick={() => playFrom(songs, 0, origin)} disabled={!songs.length}>
               <Play size={16} fill="currentColor" /> Play
             </PrimaryButton>
             <GhostButton
               disabled={!songs.length}
               onClick={() => {
                 player.setShuffle(true)
-                player.setQueue(songs, Math.floor(Math.random() * songs.length), true)
+                playFrom(songs, Math.floor(Math.random() * songs.length), origin)
               }}
             >
               <Shuffle size={16} /> Shuffle
@@ -55,7 +59,7 @@ export function TrackPage({
       ) : shown.length === 0 ? (
         <Empty>No songs match</Empty>
       ) : (
-        <TrackList tracks={shown} />
+        <TrackList tracks={shown} origin={origin} />
       )}
     </div>
   )

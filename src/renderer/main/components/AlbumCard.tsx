@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { Play } from 'lucide-react'
 import type { AlbumID3, ArtistID3 } from '@shared/subsonic/types'
 import type { SubsonicClient } from '@shared/subsonic/client'
-import type { Track } from '@shared/types'
+import type { RecentItem, Track } from '@shared/types'
 import { parseDiscName } from '@shared/format'
 import { Cover } from '@renderer/shared/Cover'
-import { player } from '@renderer/shared/playerStore'
 import { useClient } from '@renderer/shared/sessionStore'
 import { nav, type View } from '../nav'
+import { albumRecent, playFrom } from '../recents'
 import { Spinner } from './ui'
 
 /** `discIds` are sibling albums holding the rest of a split multi-disc release, in disc order. */
@@ -18,7 +18,7 @@ export function AlbumCard({ album, discIds }: { album: AlbumID3; discIds?: strin
     e.stopPropagation()
     if (!client) return
     const albums = await Promise.all(ids.map((i) => client.getAlbum(i)))
-    player.setQueue(albums.flatMap((a) => a.song), 0, true)
+    playFrom(albums.flatMap((a) => a.song), 0, albumRecent(album, discIds))
   }
   return (
     <div
@@ -109,22 +109,26 @@ export function Tile({
   title,
   view,
   art,
-  load
+  load,
+  recent
 }: {
   title: string
-  view: View
+  /** Absent for a tile that stands for a single song: clicking it plays instead of navigating. */
+  view?: View
   art: React.ReactNode
   load: (client: SubsonicClient) => Promise<Track[]>
+  /** What playing this tile puts on Home's shelf; `null` for one that is pinned there anyway. */
+  recent: RecentItem | null
 }) {
   const client = useClient()
   const [busy, setBusy] = useState(false)
-  const play = async (e: React.MouseEvent): Promise<void> => {
-    e.stopPropagation()
+  const play = async (e?: React.MouseEvent): Promise<void> => {
+    e?.stopPropagation()
     if (!client || busy) return
     setBusy(true)
     try {
       const tracks = await load(client)
-      if (tracks.length) player.setQueue(tracks, 0, true)
+      if (tracks.length) playFrom(tracks, 0, recent)
     } finally {
       setBusy(false)
     }
@@ -132,7 +136,7 @@ export function Tile({
   return (
     <div className="group relative">
       <button
-        onClick={() => nav.go(view)}
+        onClick={() => (view ? nav.go(view) : void play())}
         className="flex h-16 w-full items-center gap-3 overflow-hidden rounded-md bg-white/[0.07] text-left transition hover:bg-white/[0.14]"
       >
         <div className="h-16 w-16 shrink-0">{art}</div>
