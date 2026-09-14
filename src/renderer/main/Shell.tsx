@@ -10,6 +10,7 @@ import { Albums } from './views/Albums'
 import { Artists } from './views/Artists'
 import { Genres, GenreView } from './views/Genres'
 import { Moods, MoodView } from './views/Moods'
+import { MixView } from './views/Mixes'
 import { ArtistView } from './views/ArtistView'
 import { AlbumView } from './views/AlbumView'
 import { PlaylistView } from './views/PlaylistView'
@@ -35,6 +36,8 @@ function Content() {
       return <Moods />
     case 'mood':
       return <MoodView value={view.value} />
+    case 'mix':
+      return <MixView value={view.value} />
     case 'artist':
       return <ArtistView id={view.id} />
     case 'album':
