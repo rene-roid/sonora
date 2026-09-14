@@ -1,4 +1,5 @@
-import type { PlayerCommandName, PlayerCommands, PlayerEvents, RepeatMode, Track } from '@shared/types'
+import type { PlayerCommandName, PlayerCommands, PlayerEvents, RepeatMode, ResumeState, Track } from '@shared/types'
+import { sanitizeResume } from '@shared/types'
 import type { SubsonicClient } from '@shared/subsonic/client'
 import { clamp } from '@shared/format'
 
@@ -32,6 +33,8 @@ export class AudioEngine {
   private framesWanted = false
   private consecutiveErrors = 0
   private scrobbleSubmitted = false
+  /** Seconds to jump to once the next source reports its metadata (restored position). */
+  private pendingSeek = 0
 
   constructor(private readonly emit: Emit) {
     const a = this.audio
@@ -47,6 +50,13 @@ export class AudioEngine {
     a.addEventListener('pause', () => {
       this.emit('playStateChanged', { playing: false })
       this.stopPositionTimer()
+      this.emitPosition()
+    })
+    a.addEventListener('loadedmetadata', () => {
+      if (this.pendingSeek > 0) {
+        a.currentTime = Math.min(this.pendingSeek, Math.max(0, a.duration - 0.25))
+        this.pendingSeek = 0
+      }
       this.emitPosition()
     })
     a.addEventListener('ended', () => this.onEnded())
@@ -82,13 +92,28 @@ export class AudioEngine {
     if (!wanted) this.stopFrameTimer()
   }
 
-  restore(opts: { volume: number; muted: boolean; repeat: RepeatMode; shuffle: boolean }): void {
+  restore(opts: {
+    volume: number
+    muted: boolean
+    repeat: RepeatMode
+    shuffle: boolean
+    resume?: ResumeState | null
+  }): void {
     this.audio.volume = clamp(opts.volume, 0, 1)
     this.audio.muted = opts.muted
     this.repeat = opts.repeat
     this.shuffle = opts.shuffle
     this.emit('volumeChanged', { volume: this.audio.volume, muted: this.audio.muted })
     this.emit('modeChanged', { repeat: this.repeat, shuffle: this.shuffle })
+
+    // The saved queue is already in play order, so load it as-is instead of re-shuffling it.
+    // ponytail: the pre-shuffle order is not persisted, so turning shuffle off after a resume keeps the shuffled order.
+    const resume = sanitizeResume(opts.resume)
+    if (!resume) return
+    this.queue = [...resume.queue]
+    this.index = resume.index
+    this.emitQueue()
+    this.load(this.index, false, resume.position)
   }
 
   get current(): Track | null {
@@ -232,18 +257,21 @@ export class AudioEngine {
     }
   }
 
-  private load(index: number, autoplay: boolean): void {
+  private load(index: number, autoplay: boolean, seek = 0): void {
     const track = this.queue[index]
     if (!track || !this.client) return
     this.ensureGraph()
     this.index = index
     this.scrobbleSubmitted = false
+    this.pendingSeek = seek
     this.audio.src = this.client.streamUrl(track.id)
     this.audio.load()
     this.emit('trackChanged', { track, index })
-    this.emit('positionUpdate', { position: 0, duration: track.duration })
-    void this.client.scrobble(track.id, false).catch(() => undefined)
-    if (autoplay) void this.safePlay()
+    this.emit('positionUpdate', { position: seek, duration: track.duration })
+    if (autoplay) {
+      void this.client.scrobble(track.id, false).catch(() => undefined)
+      void this.safePlay()
+    }
   }
 
   private async safePlay(): Promise<void> {
