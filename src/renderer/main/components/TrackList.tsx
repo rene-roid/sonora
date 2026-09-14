@@ -1,29 +1,68 @@
-import { ListEnd, ListPlus, Play, Volume2 } from 'lucide-react'
+import { useState } from 'react'
+import {
+  ArrowLeft,
+  Disc3,
+  Heart,
+  HeartOff,
+  ListEnd,
+  ListMusic,
+  ListPlus,
+  Mic2,
+  Play,
+  Plus,
+  Trash2,
+  Volume2
+} from 'lucide-react'
 import type { Track } from '@shared/types'
 import { formatTime } from '@shared/format'
 import { Cover } from '@renderer/shared/Cover'
 import { player, usePlayerState } from '@renderer/shared/playerStore'
+import { useClient } from '@renderer/shared/sessionStore'
 import { nav } from '../nav'
+import { useAsync } from '../useAsync'
+import { ContextMenu, MenuItem, MenuLabel, MenuSeparator, useContextMenu } from './ContextMenu'
 
 export function TrackList({
   tracks,
   showAlbum = true,
   showCover = true,
-  numbered = false
+  numbered = false,
+  onRemove,
+  removeLabel = 'Remove'
 }: {
   tracks: Track[]
   showAlbum?: boolean
   showCover?: boolean
   numbered?: boolean
+  /** Given, the context menu offers a removal entry for the row at `index`. */
+  onRemove?: (index: number) => void
+  removeLabel?: string
 }) {
   const currentId = usePlayerState((s) => s.track?.id)
   const playing = usePlayerState((s) => s.playing)
+  const client = useClient()
+  const menu = useContextMenu()
+  const [menuIndex, setMenuIndex] = useState(0)
+  // Server state only refreshes on reload, so remember toggles made here.
+  const [starred, setStarred] = useState<Record<string, boolean>>({})
+  const isStarred = (t: Track): boolean => starred[t.id] ?? Boolean(t.starred)
+
+  const toggleStar = async (t: Track): Promise<void> => {
+    if (!client) return
+    const next = !isStarred(t)
+    setStarred((s) => ({ ...s, [t.id]: next }))
+    try {
+      await (next ? client.star(t.id) : client.unstar(t.id))
+    } catch {
+      setStarred((s) => ({ ...s, [t.id]: !next }))
+    }
+  }
 
   if (!tracks.length) return <div className="py-10 text-center text-sm text-ink-3">No tracks</div>
 
   return (
     <div className="text-sm">
-      <div className="grid grid-cols-[40px_1fr_auto] items-center gap-3 border-b border-stroke px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-ink-3 md:grid-cols-[40px_1fr_1fr_80px_60px]">
+      <div className="grid grid-cols-[40px_1fr_auto] items-center gap-3 border-b border-stroke px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-ink-3 md:grid-cols-[40px_1fr_1fr_110px_60px]">
         <div className="text-center">#</div>
         <div>Title</div>
         {showAlbum ? <div className="hidden md:block">Album</div> : <div className="hidden md:block" />}
@@ -32,11 +71,16 @@ export function TrackList({
       </div>
       {tracks.map((t, i) => {
         const isCurrent = t.id === currentId
+        const fav = isStarred(t)
         return (
           <div
             key={`${t.id}-${i}`}
             onDoubleClick={() => player.setQueue(tracks, i, true)}
-            className={`group grid grid-cols-[40px_1fr_auto] items-center gap-3 rounded-md px-3 py-1.5 hover:bg-white/[0.06] md:grid-cols-[40px_1fr_1fr_80px_60px] ${
+            onContextMenu={(e) => {
+              setMenuIndex(i)
+              menu.open(e)
+            }}
+            className={`group grid grid-cols-[40px_1fr_auto] items-center gap-3 rounded-md px-3 py-1.5 hover:bg-white/[0.06] md:grid-cols-[40px_1fr_1fr_110px_60px] ${
               isCurrent ? 'text-accent' : ''
             }`}
           >
@@ -76,11 +120,27 @@ export function TrackList({
             ) : (
               <div className="hidden md:block" />
             )}
-            <div className="hidden items-center justify-end gap-1 opacity-0 group-hover:opacity-100 md:flex">
-              <button className="icon-btn h-7 w-7" title="Play next" onClick={() => player.addToQueue([t], true)}>
+            <div className="hidden items-center justify-end gap-1 md:flex">
+              <button
+                className={`icon-btn h-7 w-7 ${fav ? 'text-accent hover:text-accent' : 'opacity-0 group-hover:opacity-100'}`}
+                title={fav ? 'Remove from favorites' : 'Add to favorites'}
+                disabled={!client}
+                onClick={() => void toggleStar(t)}
+              >
+                <Heart size={14} fill={fav ? 'currentColor' : 'none'} />
+              </button>
+              <button
+                className="icon-btn h-7 w-7 opacity-0 group-hover:opacity-100"
+                title="Play next"
+                onClick={() => player.addToQueue([t], true)}
+              >
                 <ListEnd size={15} />
               </button>
-              <button className="icon-btn h-7 w-7" title="Add to queue" onClick={() => player.addToQueue([t])}>
+              <button
+                className="icon-btn h-7 w-7 opacity-0 group-hover:opacity-100"
+                title="Add to queue"
+                onClick={() => player.addToQueue([t])}
+              >
                 <ListPlus size={15} />
               </button>
             </div>
@@ -88,6 +148,117 @@ export function TrackList({
           </div>
         )
       })}
+      {menu.pos && tracks[menuIndex] && (
+        <TrackMenu
+          pos={menu.pos}
+          track={tracks[menuIndex]}
+          starred={isStarred(tracks[menuIndex])}
+          onClose={menu.close}
+          onPlay={() => player.setQueue(tracks, menuIndex, true)}
+          onToggleStar={() => void toggleStar(tracks[menuIndex])}
+          onRemove={onRemove && (() => onRemove(menuIndex))}
+          removeLabel={removeLabel}
+        />
+      )}
     </div>
+  )
+}
+
+function TrackMenu({
+  pos,
+  track,
+  starred,
+  onClose,
+  onPlay,
+  onToggleStar,
+  onRemove,
+  removeLabel
+}: {
+  pos: { x: number; y: number }
+  track: Track
+  starred: boolean
+  onClose: () => void
+  onPlay: () => void
+  onToggleStar: () => void
+  onRemove?: () => void
+  removeLabel: string
+}) {
+  const client = useClient()
+  const [picking, setPicking] = useState(false)
+  // Already warm from the sidebar's copy of the same key, so the picker opens without a wait.
+  const playlists = useAsync('playlists', () => (picking ? client?.getPlaylists() : undefined), [client, picking])
+
+  const run = (fn: () => void) => () => {
+    fn()
+    onClose()
+  }
+
+  const addTo = (id: string): void => {
+    void client?.updatePlaylist(id, { songIdToAdd: [track.id] })
+    onClose()
+  }
+
+  return (
+    <ContextMenu pos={pos} onClose={onClose}>
+      {picking ? (
+        <>
+          <MenuItem icon={<ArrowLeft size={14} />} onClick={() => setPicking(false)}>
+            Add to playlist
+          </MenuItem>
+          <MenuSeparator />
+          {playlists.loading && <MenuLabel>Loading…</MenuLabel>}
+          {playlists.error && <MenuLabel>{playlists.error}</MenuLabel>}
+          {playlists.data?.length === 0 && <MenuLabel>No playlists</MenuLabel>}
+          {playlists.data?.map((p) => (
+            <MenuItem key={p.id} icon={<ListMusic size={14} />} onClick={() => addTo(p.id)}>
+              {p.name}
+            </MenuItem>
+          ))}
+        </>
+      ) : (
+        <>
+          <MenuLabel>{track.title}</MenuLabel>
+          <MenuItem icon={<Play size={14} />} onClick={run(onPlay)}>
+            Play
+          </MenuItem>
+          <MenuItem icon={<ListEnd size={14} />} onClick={run(() => player.addToQueue([track], true))}>
+            Play next
+          </MenuItem>
+          <MenuItem icon={<ListPlus size={14} />} onClick={run(() => player.addToQueue([track]))}>
+            Add to queue
+          </MenuItem>
+          <MenuSeparator />
+          <MenuItem icon={<Plus size={14} />} onClick={() => setPicking(true)} disabled={!client} hint="›">
+            Add to playlist
+          </MenuItem>
+          <MenuItem
+            icon={starred ? <HeartOff size={14} /> : <Heart size={14} />}
+            onClick={run(onToggleStar)}
+            disabled={!client}
+          >
+            {starred ? 'Remove from favorites' : 'Add to favorites'}
+          </MenuItem>
+          {(track.albumId || track.artistId) && <MenuSeparator />}
+          {track.albumId && (
+            <MenuItem icon={<Disc3 size={14} />} onClick={run(() => nav.go({ name: 'album', id: track.albumId! }))}>
+              Go to album
+            </MenuItem>
+          )}
+          {track.artistId && (
+            <MenuItem icon={<Mic2 size={14} />} onClick={run(() => nav.go({ name: 'artist', id: track.artistId! }))}>
+              Go to artist
+            </MenuItem>
+          )}
+          {onRemove && (
+            <>
+              <MenuSeparator />
+              <MenuItem icon={<Trash2 size={14} />} onClick={run(onRemove)} danger>
+                {removeLabel}
+              </MenuItem>
+            </>
+          )}
+        </>
+      )}
+    </ContextMenu>
   )
 }

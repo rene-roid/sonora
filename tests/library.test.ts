@@ -57,3 +57,28 @@ describe('filterTracks', () => {
     expect(filterTracks(tracks, 'nope').length).toBe(0)
   })
 })
+
+describe('updatePlaylist', () => {
+  test('multi-valued params are repeated, not joined', async () => {
+    let url = ''
+    const client = new SubsonicClient(session, async (u) => {
+      url = u
+      return new Response(JSON.stringify({ 'subsonic-response': { status: 'ok' } }))
+    })
+    await client.updatePlaylist('pl1', { songIdToAdd: ['a', 'b'], songIndexToRemove: [0, 3] })
+    const p = new URL(url).searchParams
+    expect(p.get('playlistId')).toBe('pl1')
+    expect(p.getAll('songIdToAdd')).toEqual(['a', 'b'])
+    expect(p.getAll('songIndexToRemove')).toEqual(['0', '3'])
+  })
+
+  test('removing the first entry still sends index 0', async () => {
+    let url = ''
+    const client = new SubsonicClient(session, async (u) => {
+      url = u
+      return new Response(JSON.stringify({ 'subsonic-response': { status: 'ok' } }))
+    })
+    await client.updatePlaylist('pl1', { songIndexToRemove: [0] })
+    expect(new URL(url).searchParams.getAll('songIndexToRemove')).toEqual(['0'])
+  })
+})
