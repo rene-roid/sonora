@@ -40,7 +40,7 @@ console.log(`  ${artists.length} artists; first: ${artists.slice(0, 5).map((a) =
 
 step('getAlbumList2 newest')
 const albums = await client.getAlbumList2('newest', 5)
-for (const a of albums) console.log(`  ${a.name} — ${a.artist ?? '?'} (${a.year ?? 'n/a'}) id=${a.id}`)
+for (const a of albums) console.log(`  ${a.name} · ${a.artist ?? '?'} (${a.year ?? 'n/a'}) id=${a.id}`)
 
 step('search3 "a"')
 const search = await client.search3('a', { artistCount: 3, albumCount: 3, songCount: 3 })

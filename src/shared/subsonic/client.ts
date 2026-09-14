@@ -9,6 +9,8 @@ import type {
   ArtistResponse,
   ArtistsResponse,
   Child,
+  Genre,
+  GenresResponse,
   LyricsBySongIdResponse,
   LyricsResponse,
   PingResponse,
@@ -17,6 +19,7 @@ import type {
   PlaylistsResponse,
   RandomSongsResponse,
   Search3Response,
+  SongsByGenreResponse,
   Starred2Response,
   StructuredLyrics,
   SubsonicEnvelope
@@ -152,6 +155,16 @@ export class SubsonicClient {
   async getRandomSongs(size = 50): Promise<Track[]> {
     const r = await this.call<RandomSongsResponse>('getRandomSongs', { size })
     return (r.randomSongs.song ?? []).map(childToTrack)
+  }
+
+  async getGenres(): Promise<Genre[]> {
+    const r = await this.call<GenresResponse>('getGenres')
+    return r.genres.genre ?? []
+  }
+
+  async getSongsByGenre(genre: string, count = 500, offset = 0): Promise<Track[]> {
+    const r = await this.call<SongsByGenreResponse>('getSongsByGenre', { genre, count, offset })
+    return (r.songsByGenre.song ?? []).map(childToTrack)
   }
 
   async getStarred2(): Promise<{ artists: ArtistID3[]; albums: AlbumID3[]; songs: Track[] }> {

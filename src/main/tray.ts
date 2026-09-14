@@ -11,7 +11,7 @@ export function rebuildTrayMenu(): void {
   const track = playerState.track
   const menu = Menu.buildFromTemplate([
     {
-      label: track ? `${track.title} — ${track.artist}` : 'Nothing playing',
+      label: track ? `${track.title} · ${track.artist}` : 'Nothing playing',
       enabled: false
     },
     { type: 'separator' },
@@ -47,7 +47,7 @@ export function rebuildTrayMenu(): void {
     }
   ])
   tray.setContextMenu(menu)
-  tray.setToolTip(track ? `Sonora — ${track.title} · ${track.artist}` : 'Sonora')
+  tray.setToolTip(track ? `Sonora · ${track.title} · ${track.artist}` : 'Sonora')
 }
 
 export function createTray(): Tray {

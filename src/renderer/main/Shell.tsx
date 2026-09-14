@@ -8,6 +8,7 @@ import { LyricsView } from './views/LyricsView'
 import { Home } from './views/Home'
 import { Albums } from './views/Albums'
 import { Artists } from './views/Artists'
+import { Genres, GenreView } from './views/Genres'
 import { ArtistView } from './views/ArtistView'
 import { AlbumView } from './views/AlbumView'
 import { PlaylistView } from './views/PlaylistView'
@@ -25,6 +26,10 @@ function Content() {
       return <Albums />
     case 'artists':
       return <Artists />
+    case 'genres':
+      return <Genres />
+    case 'genre':
+      return <GenreView value={view.value} />
     case 'artist':
       return <ArtistView id={view.id} />
     case 'album':

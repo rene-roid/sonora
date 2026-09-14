@@ -7,7 +7,7 @@ import { RETRY_MS } from '../useAsync'
 import { cacheRead, cacheWrite } from '@renderer/shared/cache'
 
 const SORTS: { key: AlbumListType; label: string }[] = [
-  { key: 'alphabeticalByName', label: 'A–Z' },
+  { key: 'alphabeticalByName', label: 'A-Z' },
   { key: 'alphabeticalByArtist', label: 'Artist' },
   { key: 'newest', label: 'Recently added' },
   { key: 'frequent', label: 'Most played' },

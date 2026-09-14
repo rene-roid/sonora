@@ -154,3 +154,17 @@ export type AlbumListType =
   | 'starred'
   | 'byYear'
   | 'byGenre'
+
+export interface Genre {
+  value: string
+  songCount?: number
+  albumCount?: number
+}
+
+export interface GenresResponse {
+  genres: { genre?: Genre[] }
+}
+
+export interface SongsByGenreResponse {
+  songsByGenre: { song?: Child[] }
+}

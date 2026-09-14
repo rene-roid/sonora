@@ -6,7 +6,7 @@
 
 **A Spotify-like desktop client for your own music server.**
 
-Point it at a [Navidrome](https://www.navidrome.org/) (or any Subsonic/OpenSubsonic) server — it
+Point it at a [Navidrome](https://www.navidrome.org/) (or any Subsonic/OpenSubsonic) server. It
 gives you synced lyrics, Fluent 2 track-change toasts, a floating mini-player and a taskbar-area
 widget with a live audio visualiser.
 
@@ -22,16 +22,16 @@ widget with a live audio visualiser.
 
 ## Features
 
-- 🎵 **Full library UI** — home, albums, artists, playlists, search, favorites and a queue panel, all backed by the Subsonic API
-- 🎤 **Synced Lyrics** — OpenSubsonic structured lyrics with an LRC/SRT/plain fallback, extrapolated between position updates so the highlighted line tracks the audio
-- 🔔 **Fluent Toasts** — a frameless, click-through, always-on-top card that animates in on every track change
-- 🪟 **Mini-player** — draggable always-on-top player that remembers where you put it
-- 📊 **Taskbar Widget** — acrylic flyout pinned above the taskbar with a canvas visualiser fed by a Web Audio `AnalyserNode` at ~30fps
-- ❤️ **Favorites** — star anything from a track row or the now-playing bar; starred tracks collect into their own view
-- ⏯ **Resume on Launch** — playback state is persisted on quit and restored where you left off
-- 🔐 **Encrypted Credentials** — only the derived Subsonic token is stored, encrypted with Electron's `safeStorage`; the plain password is never persisted
-- ⌨️ **Media Keys** — global media-key support (toggleable) plus in-app shortcuts
-- 🧪 **Mock Server** — a bundled OpenSubsonic mock with synthetic audio, art and synced lyrics, so you can develop with no server at all
+- 🎵 **Full library UI.** Home, albums, artists, playlists, search, favorites and a queue panel, all backed by the Subsonic API
+- 🎤 **Synced Lyrics.** OpenSubsonic structured lyrics with an LRC/SRT/plain fallback, extrapolated between position updates so the highlighted line tracks the audio
+- 🔔 **Fluent Toasts.** A frameless, click-through, always-on-top card that animates in on every track change
+- 🪟 **Mini-player.** Draggable always-on-top player that remembers where you put it
+- 📊 **Taskbar Widget.** Acrylic flyout pinned above the taskbar with a canvas visualiser fed by a Web Audio `AnalyserNode` at ~30fps
+- ❤️ **Favorites.** Star anything from a track row or the now-playing bar; starred tracks collect into their own view
+- ⏯ **Resume on Launch.** Playback state is persisted on quit and restored where you left off
+- 🔐 **Encrypted Credentials.** Only the derived Subsonic token is stored, encrypted with Electron's `safeStorage`; the plain password is never persisted
+- ⌨️ **Media Keys.** Global media-key support (toggleable) plus in-app shortcuts
+- 🧪 **Mock Server.** A bundled OpenSubsonic mock with synthetic audio, art and synced lyrics, so you can develop with no server at all
 
 ## Tech Stack
 
@@ -48,7 +48,7 @@ widget with a live audio visualiser.
 
 - Windows 10/11 or Linux (X11 or Wayland). The floating widgets are tuned for the Windows 11 taskbar; on Linux they sit at the edge of the work area, and the tray needs an AppIndicator/StatusNotifier host (GNOME needs an extension such as AppIndicator Support)
 - [Bun](https://bun.sh) 1.1+ as package manager / script runner (Electron itself still runs on its bundled Node)
-- A Navidrome server — or none at all, see [Quick Start](#quick-start)
+- A Navidrome server, or none at all, see [Quick Start](#quick-start)
 
 ## Quick Start
 
@@ -97,10 +97,10 @@ window is a pure display layer:
                          queueChanged, volumeChanged, modeChanged, audioFrame)
 ```
 
-- `src/shared/types.ts` — the full event/command contract (`PlayerEvents`, `PlayerCommands`, `PlayerState`)
-- `src/main/ipc.ts` — relays host events to every window, caches the latest state so new windows hydrate instantly, forwards commands to the host, and streams `audioFrame` only to windows that asked for it
-- `src/preload/index.ts` — `window.sonora` (`player.on/command/getState/wantFrames`, `auth`, `settings`, `window`, `toast`)
-- `src/renderer/shared/playerStore.ts` — `usePlayerState()` (Zustand) and the `player.*` command helpers used by every window
+- `src/shared/types.ts` holds the full event/command contract (`PlayerEvents`, `PlayerCommands`, `PlayerState`)
+- `src/main/ipc.ts` relays host events to every window, caches the latest state so new windows hydrate instantly, forwards commands to the host, and streams `audioFrame` only to windows that asked for it
+- `src/preload/index.ts` exposes `window.sonora` (`player.on/command/getState/wantFrames`, `auth`, `settings`, `window`, `toast`)
+- `src/renderer/shared/playerStore.ts` exports `usePlayerState()` (Zustand) and the `player.*` command helpers used by every window
 
 ### Windows
 

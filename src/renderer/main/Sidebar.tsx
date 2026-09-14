@@ -1,4 +1,4 @@
-import { Disc3, Heart, Home, ListMusic, Mic2, Settings } from 'lucide-react'
+import { Disc3, Heart, Home, ListMusic, Mic2, Settings, Tags } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useClient, useSessionStore } from '@renderer/shared/sessionStore'
 import { nav, useNav, type View } from './nav'
@@ -32,6 +32,7 @@ export function Sidebar() {
         <NavItem view={{ name: 'home' }} icon={<Home size={16} />} label="Home" />
         <NavItem view={{ name: 'albums' }} icon={<Disc3 size={16} />} label="Albums" />
         <NavItem view={{ name: 'artists' }} icon={<Mic2 size={16} />} label="Artists" />
+        <NavItem view={{ name: 'genres' }} icon={<Tags size={16} />} label="Genres" />
         <NavItem view={{ name: 'favorites' }} icon={<Heart size={16} />} label="Favorites" />
       </nav>
       <div className="mx-4 my-1 border-t border-stroke" />

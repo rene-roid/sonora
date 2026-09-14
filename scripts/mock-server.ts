@@ -200,6 +200,13 @@ Bun.serve({
         }
         case 'getRandomSongs':
           return ok({ randomSongs: { song: [...songs].sort(() => Math.random() - 0.5).slice(0, Number(q.get('size') ?? 10)).map(strip) } })
+        case 'getGenres': {
+          const counts = new Map<string, number>()
+          for (const s of songs) if (s.genre) counts.set(s.genre, (counts.get(s.genre) ?? 0) + 1)
+          return ok({ genres: { genre: [...counts].map(([value, songCount]) => ({ value, songCount })) } })
+        }
+        case 'getSongsByGenre':
+          return ok({ songsByGenre: { song: songs.filter((s) => s.genre === q.get('genre')).map(strip) } })
         case 'getStarred2':
           return ok({ starred2: { artist: [], album: [albums[0]], song: [strip(songs[0])] } })
         case 'search3': {

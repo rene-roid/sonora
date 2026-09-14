@@ -21,7 +21,7 @@ const engine = new AudioEngine((event, payload) => {
   host.emit(event, payload)
   if (event === 'trackChanged') {
     const t = (payload as { track: { title: string; artist: string } | null }).track
-    log(t ? `▶ ${t.title} — ${t.artist}` : '■ stopped')
+    log(t ? `▶ ${t.title} · ${t.artist}` : '■ stopped')
   } else if (event === 'error') {
     log(`⚠ ${(payload as { message: string }).message}`)
   } else if (event === 'positionUpdate') {
