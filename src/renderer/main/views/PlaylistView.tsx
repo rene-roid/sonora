@@ -57,7 +57,15 @@ export function PlaylistView({ id }: { id: string }) {
           </>
         }
       />
-      <TrackList tracks={songs} />
+      <TrackList
+        tracks={songs}
+        removeLabel="Remove from this playlist"
+        onRemove={async (i) => {
+          if (!client) return
+          await client.updatePlaylist(id, { songIndexToRemove: [i] })
+          state.reload()
+        }}
+      />
     </div>
   )
 }

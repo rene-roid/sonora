@@ -91,7 +91,7 @@ export function childToTrack(c: Child): Track {
   }
 }
 
-type Params = Record<string, string | number | boolean | undefined | null>
+type Params = Record<string, string | number | boolean | undefined | null | (string | number)[]>
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>
 
 export class SubsonicClient {
@@ -132,7 +132,9 @@ export class SubsonicClient {
     const p = this.authParams()
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === null || v === '') continue
-      p.set(k, String(v))
+      // Subsonic takes repeated keys for multi-valued params (songIdToAdd, songIndexToRemove).
+      if (Array.isArray(v)) for (const item of v) p.append(k, String(item))
+      else p.set(k, String(v))
     }
     return `${this.active}/rest/${method}?${p.toString()}`
   }
@@ -274,6 +276,14 @@ export class SubsonicClient {
   async getPlaylist(id: string): Promise<Playlist & { entry: Track[] }> {
     const r = await this.call<PlaylistResponse>('getPlaylist', { id })
     return { ...r.playlist, entry: (r.playlist.entry ?? []).map(childToTrack) }
+  }
+
+  /** Add and/or remove songs. Indexes refer to the playlist's current order, so removals are applied server-side in one call. */
+  updatePlaylist(
+    playlistId: string,
+    changes: { songIdToAdd?: string[]; songIndexToRemove?: number[]; name?: string }
+  ): Promise<unknown> {
+    return this.call('updatePlaylist', { playlistId, ...changes })
   }
 
   // ---- annotation ----------------------------------------------------------
