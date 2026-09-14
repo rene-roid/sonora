@@ -124,11 +124,26 @@ app.whenReady().then(() => {
   })
 })
 
+let lastResume = ''
+
+/** Snapshot the resume point, skipping the write when nothing moved since the last one. */
+function saveResume(): void {
+  // Before the host finishes restoring, the queue is still empty and a write would erase the saved one.
+  if (!playerState.hostReady) return
+  const { queue, index, position } = playerState
+  const resume = sanitizeResume({ queue, index, position })
+  const key = JSON.stringify(resume)
+  if (key === lastResume) return
+  lastResume = key
+  updateSettings({ resume })
+}
+
+// A kill -9 or a crash never reaches before-quit, so checkpoint while running too.
+setInterval(saveResume, 10_000)
+
 app.on('before-quit', () => {
   quitting = true
-  // ponytail: snapshot only on quit; if the app is killed the resume point is lost. Save periodically if that bites.
-  const { queue, index, position } = playerState
-  updateSettings({ resume: sanitizeResume({ queue, index, position }) })
+  saveResume()
 })
 
 app.on('will-quit', () => {
