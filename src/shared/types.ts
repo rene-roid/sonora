@@ -95,6 +95,20 @@ export interface Session {
   salt: string
 }
 
+export interface ResumeState {
+  queue: Track[]
+  index: number
+  position: number
+}
+
+/** Clamp a persisted resume snapshot back into a usable range; null when there is nothing to resume. */
+export function sanitizeResume(r: ResumeState | null | undefined): ResumeState | null {
+  if (!r?.queue?.length) return null
+  const index = Math.min(Math.max(Math.trunc(r.index) || 0, 0), r.queue.length - 1)
+  const position = Number.isFinite(r.position) ? Math.max(0, r.position) : 0
+  return { queue: r.queue, index, position }
+}
+
 export type WindowName = 'main' | 'host' | 'toast' | 'mini' | 'widget'
 
 export interface Rect {
@@ -115,6 +129,8 @@ export interface Settings {
   mediaKeys: boolean
   toastDurationMs: number
   windowBounds: Partial<Record<WindowName, Rect>>
+  /** Queue and playback position saved on quit so the next launch picks up where it left off. */
+  resume: ResumeState | null
 }
 
 export const defaultSettings: Settings = {
@@ -127,7 +143,8 @@ export const defaultSettings: Settings = {
   autoLaunch: false,
   mediaKeys: true,
   toastDurationMs: 3500,
-  windowBounds: {}
+  windowBounds: {},
+  resume: null
 }
 
 export interface LyricLine {

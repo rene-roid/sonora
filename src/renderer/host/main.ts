@@ -39,13 +39,14 @@ host.onFramesWanted((wanted) => engine.setFramesWanted(wanted))
 
 async function boot(): Promise<void> {
   const s = await settings.get()
-  engine.restore({ volume: s.volume, muted: s.muted, repeat: s.repeat, shuffle: s.shuffle })
 
   const applySession = (session: Session | null): void => {
     engine.setClient(session ? new SubsonicClient(session) : null)
     log(session ? `session for ${session.username}@${session.server}` : 'no session')
   }
+  // The client has to exist before restore(), which loads the saved queue paused at its last position.
   applySession(await auth.getSession())
+  engine.restore({ volume: s.volume, muted: s.muted, repeat: s.repeat, shuffle: s.shuffle, resume: s.resume })
   auth.onChange(applySession)
 
   host.emit('hostReady', { ready: true })

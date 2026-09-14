@@ -1,7 +1,8 @@
 import { app, BrowserWindow, globalShortcut, screen, session } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { setupIpc, setPlayerHooks, sendCommand } from './ipc'
-import { getSettings, onSettingsChange } from './store'
+import { setupIpc, setPlayerHooks, sendCommand, playerState } from './ipc'
+import { getSettings, onSettingsChange, updateSettings } from './store'
+import { sanitizeResume } from '@shared/types'
 import { loadSession } from './credentials'
 import { createTray, rebuildTrayMenu } from './tray'
 import {
@@ -99,7 +100,8 @@ app.whenReady().then(() => {
   setPlayerHooks({
     onTrackChanged: ({ track }) => {
       rebuildTrayMenu()
-      if (track && getSettings().widgets.toast) {
+      // hostReady is still false while the audio host restores the saved queue, so a resume does not toast.
+      if (track && playerState.hostReady && getSettings().widgets.toast) {
         const toast = getWindow('toast')
         if (toast) {
           positionToast()
@@ -124,6 +126,9 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   quitting = true
+  // ponytail: snapshot only on quit; if the app is killed the resume point is lost. Save periodically if that bites.
+  const { queue, index, position } = playerState
+  updateSettings({ resume: sanitizeResume({ queue, index, position }) })
 })
 
 app.on('will-quit', () => {

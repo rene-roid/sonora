@@ -1,10 +1,10 @@
-import { ListMusic, MicVocal, PictureInPicture2, Repeat, Repeat1, Shuffle, Volume1, Volume2, VolumeX } from 'lucide-react'
-import { useState } from 'react'
+import { Heart, ListMusic, MicVocal, PictureInPicture2, Repeat, Repeat1, Shuffle, Volume1, Volume2, VolumeX } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { formatTime } from '@shared/format'
 import { Cover } from '@renderer/shared/Cover'
 import { TransportControls } from '@renderer/shared/Controls'
 import { player, usePlayerState } from '@renderer/shared/playerStore'
-import { useSettings } from '@renderer/shared/sessionStore'
+import { useClient, useSettings } from '@renderer/shared/sessionStore'
 import { nav, useNav } from './nav'
 
 export function NowPlayingBar() {
@@ -56,6 +56,7 @@ export function NowPlayingBar() {
           >
             <Shuffle size={16} />
           </button>
+          <FavoriteButton />
           <TransportControls size={18} />
           <button
             className={`icon-btn h-8 w-8 ${repeat !== 'off' ? 'text-accent hover:text-accent' : ''}`}
@@ -134,5 +135,34 @@ export function NowPlayingBar() {
         </div>
       </div>
     </footer>
+  )
+}
+
+/** Star/unstar the current track on the server. Optimistic, reverts if the call fails. */
+function FavoriteButton() {
+  const track = usePlayerState((s) => s.track)
+  const client = useClient()
+  const [starred, setStarred] = useState(false)
+
+  useEffect(() => setStarred(Boolean(track?.starred)), [track?.id, track?.starred])
+
+  return (
+    <button
+      className={`icon-btn h-8 w-8 ${starred ? 'text-accent hover:text-accent' : ''}`}
+      disabled={!track || !client}
+      title={starred ? 'Remove from favorites' : 'Add to favorites'}
+      onClick={async () => {
+        if (!track || !client) return
+        const next = !starred
+        setStarred(next)
+        try {
+          await (next ? client.star(track.id) : client.unstar(track.id))
+        } catch {
+          setStarred(!next)
+        }
+      }}
+    >
+      <Heart size={16} fill={starred ? 'currentColor' : 'none'} />
+    </button>
   )
 }
