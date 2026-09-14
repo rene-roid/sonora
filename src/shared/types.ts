@@ -19,6 +19,26 @@ export interface Track {
   starred?: boolean
   bitRate?: number
   suffix?: string
+  /** ReplayGain tags from the server, used by the volume-normalisation setting. */
+  gain?: { track?: number; album?: number; trackPeak?: number; albumPeak?: number; fallback?: number }
+}
+
+export type NormalizeMode = 'off' | 'track' | 'album'
+
+/**
+ * Linear gain factor for a track under `mode`, clamped so peak * gain never clips.
+ * Album mode keeps a record's internal loudness shape and only levels between albums.
+ */
+export function replayGainFactor(gain: Track['gain'], mode: NormalizeMode): number {
+  if (mode === 'off') return 1
+  const album = mode === 'album'
+  // Album mode falls back to the track value: a single loose track has no album gain.
+  const dB = (album ? gain?.album ?? gain?.track : gain?.track) ?? gain?.fallback
+  if (dB === undefined || !Number.isFinite(dB)) return 1
+  const peak = (album ? gain?.albumPeak ?? gain?.trackPeak : gain?.trackPeak) ?? 0
+  const factor = 10 ** (dB / 20)
+  // No peak means no headroom budget, so a boost could clip: only attenuation is safe.
+  return peak > 0 ? Math.min(factor, 1 / peak) : Math.min(factor, 1)
 }
 
 export type RepeatMode = 'off' | 'all' | 'one'
@@ -130,6 +150,8 @@ export interface Settings {
   closeToTray: boolean
   autoLaunch: boolean
   mediaKeys: boolean
+  /** Level playback across tracks using the server's ReplayGain tags. */
+  normalize: NormalizeMode
   toastDurationMs: number
   windowBounds: Partial<Record<WindowName, Rect>>
   /** Queue and playback position saved on quit so the next launch picks up where it left off. */
@@ -145,6 +167,7 @@ export const defaultSettings: Settings = {
   closeToTray: true,
   autoLaunch: false,
   mediaKeys: true,
+  normalize: 'album',
   toastDurationMs: 3500,
   windowBounds: {},
   resume: null

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import type { Session, Settings } from '@shared/types'
+import type { NormalizeMode, Session, Settings } from '@shared/types'
 import type { ServerProbe } from '@shared/subsonic/client'
 import { useSessionStore, useSettings } from '@renderer/shared/sessionStore'
 import { GhostButton, PageTitle, SectionHeader, Spinner } from '../components/ui'
@@ -145,6 +145,44 @@ function Toggle({
   )
 }
 
+const NORMALIZE_MODES: { value: NormalizeMode; label: string }[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'album', label: 'Per album' },
+  { value: 'track', label: 'Per track' }
+]
+
+function NormalizeSetting({ value, onChange }: { value: NormalizeMode; onChange: (v: NormalizeMode) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-6 rounded-md px-3 py-3">
+      <div>
+        <div className="text-sm font-medium">Volume normalisation</div>
+        <div className="text-xs text-ink-2">
+          {value === 'off'
+            ? 'Tracks play at their original loudness.'
+            : value === 'album'
+              ? 'Levels loudness between albums while keeping each album\u2019s own quiet and loud moments.'
+              : 'Levels every track to the same loudness, even within an album.'}{' '}
+          Uses the ReplayGain tags from your server; untagged tracks are left alone.
+        </div>
+      </div>
+      <div className="flex shrink-0 rounded-md border border-white/10 p-0.5">
+        {NORMALIZE_MODES.map((m) => (
+          <button
+            key={m.value}
+            aria-pressed={value === m.value}
+            onClick={() => onChange(m.value)}
+            className={`rounded px-2.5 py-1 text-xs transition ${
+              value === m.value ? 'bg-accent font-semibold text-black' : 'text-ink-2 hover:text-ink'
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function SettingsView() {
   const settings = useSettings()
   const session = useSessionStore((s) => s.session)
@@ -198,6 +236,11 @@ export function SettingsView() {
             onChange={(e) => update({ toastDurationMs: Number(e.target.value) })}
           />
         </label>
+      </section>
+
+      <section className="mb-8">
+        <SectionHeader title="Playback" />
+        <NormalizeSetting value={settings.normalize} onChange={(normalize) => update({ normalize })} />
       </section>
 
       <section className="mb-8">

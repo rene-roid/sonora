@@ -79,7 +79,15 @@ export function childToTrack(c: Child): Track {
     coverArt: c.coverArt ?? c.albumId,
     starred: Boolean(c.starred),
     bitRate: c.bitRate,
-    suffix: c.suffix
+    suffix: c.suffix,
+    // baseGain is deliberately dropped: it is the Opus header gain, which the decoder already applies.
+    gain: c.replayGain && {
+      track: c.replayGain.trackGain,
+      album: c.replayGain.albumGain,
+      trackPeak: c.replayGain.trackPeak,
+      albumPeak: c.replayGain.albumPeak,
+      fallback: c.replayGain.fallbackGain
+    }
   }
 }
 

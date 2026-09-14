@@ -58,8 +58,16 @@ async function boot(): Promise<void> {
   }
   // The client has to exist before restore(), which loads the saved queue paused at its last position.
   applySession(await auth.getSession())
-  engine.restore({ volume: s.volume, muted: s.muted, repeat: s.repeat, shuffle: s.shuffle, resume: s.resume })
+  engine.restore({
+    volume: s.volume,
+    muted: s.muted,
+    repeat: s.repeat,
+    shuffle: s.shuffle,
+    normalize: s.normalize,
+    resume: s.resume
+  })
   auth.onChange(applySession)
+  settings.onChange((next) => engine.setNormalize(next.normalize))
 
   host.emit('hostReady', { ready: true })
   log('host ready')

@@ -37,6 +37,19 @@ export interface AlbumID3 {
   moods?: string[]
 }
 
+/** OpenSubsonic ReplayGain block. Navidrome fills it from the file's tags at scan time. */
+export interface ReplayGain {
+  /** dB */
+  trackGain?: number
+  /** dB */
+  albumGain?: number
+  /** Linear sample peak, 1.0 == 0 dBFS. */
+  trackPeak?: number
+  albumPeak?: number
+  /** dB the server suggests for untagged tracks. */
+  fallbackGain?: number
+}
+
 export interface Child {
   id: string
   parent?: string
@@ -61,6 +74,7 @@ export interface Child {
   starred?: string
   playCount?: number
   moods?: string[]
+  replayGain?: ReplayGain
 }
 
 export interface Playlist {
