@@ -13,7 +13,8 @@ A Spotify-like desktop client for [Navidrome](https://www.navidrome.org/) (and o
 | Command | What it does |
 |---|---|
 | `bun install` | Install dependencies (Electron is downloaded by its postinstall; it is in `trustedDependencies`) |
-| `bun run dev` | Start Electron with Vite HMR for all renderer windows |
+| `bun run go` | **Everything in one command**: mock server + Electron with Vite HMR. `--no-mock` to skip the mock server |
+| `bun run dev` | Start Electron with Vite HMR for all renderer windows (no mock server) |
 | `bun run build` | Production build into `out/` |
 | `bun run start` | Run the production build |
 | `bun run typecheck` | Type-check main/preload/shared/scripts and the renderer |
@@ -25,7 +26,7 @@ A Spotify-like desktop client for [Navidrome](https://www.navidrome.org/) (and o
 | `bun run dist` | Build an installer for the current platform in `release/` (NSIS on Windows, AppImage + deb on Linux) |
 | `bun run dist:dir` | Build an unpacked app folder in `release/win-unpacked/` or `release/linux-unpacked/` |
 
-> If you launch Electron from inside another Electron app's terminal (VS Code, T3 Code, ...), make sure `ELECTRON_RUN_AS_NODE` is not set in the environment, otherwise Electron starts as plain Node.
+> If you launch Electron from inside another Electron app's terminal (VS Code, T3 Code, ...), make sure `ELECTRON_RUN_AS_NODE` is not set in the environment, otherwise Electron starts as plain Node. `bun run go` strips it for you; `bun run dev` does not.
 
 ## Architecture
 
@@ -75,10 +76,10 @@ The password is used once to derive the Subsonic `token = md5(password + salt)`.
 ## Development without a server
 
 ```
-bun run mock            # terminal 1: mock server on :4599 with synthetic audio, art and synced lyrics
-bun run dev             # terminal 2
+bun run go
 ```
 
+Starts the mock server on :4599 (synthetic audio, art and synced lyrics) and the app together.
 Sign in with `http://localhost:4599`, any username and password.
 
 ## Smoke test
