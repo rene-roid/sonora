@@ -30,13 +30,13 @@ widget with a live audio visualiser.
 <tr>
 <td width="50%">
 
-**Home** — greeting, pinned playlists, recently played and recently added
+**Home.** Pinned playlists, what you played last, what the server added last.
 <img src="docs/screenshots/home.png" alt="Home" />
 
 </td>
 <td width="50%">
 
-**Album** — multi-disc track list, play/shuffle/queue actions
+**Album.** Track list grouped by disc, with play, shuffle and queue buttons.
 <img src="docs/screenshots/album.png" alt="Album view" />
 
 </td>
@@ -44,13 +44,13 @@ widget with a live audio visualiser.
 <tr>
 <td width="50%">
 
-**Lyrics** — synced lyrics that follow the audio between position updates
+**Lyrics.** The highlighted line is extrapolated between 250ms position updates, so it stays on the beat instead of jumping four times a second.
 <img src="docs/screenshots/lyrics.png" alt="Synced lyrics" />
 
 </td>
 <td width="50%">
 
-**Queue** — reorder, jump, and clear without leaving the current view
+**Queue.** Double-click a row to jump to it, X to drop one track, the bin to clear the lot.
 <img src="docs/screenshots/queue.png" alt="Queue panel" />
 
 </td>
@@ -58,32 +58,32 @@ widget with a live audio visualiser.
 <tr>
 <td colspan="2">
 
-**Soundtracks** — game/film scores split out of the main album grid, multi-disc releases folded into one entry
+**Soundtracks.** Scores get their own view instead of drowning in the album grid, and a release split across discs shows up once.
 <img src="docs/screenshots/soundtracks.png" alt="Soundtracks" />
 
 </td>
 </tr>
 </table>
 
-The extra windows, all fed by the same hidden audio host:
+Three more windows, all driven by the same hidden audio host:
 
 <table>
 <tr>
 <td width="33%">
 
-**Mini-player**
+**Mini-player.** Always on top, remembers where you dragged it.
 <img src="docs/screenshots/mini.png" alt="Mini-player" />
 
 </td>
 <td width="33%">
 
-**Track-change toast**
+**Toast.** Animates in on every track change, click-through.
 <img src="docs/screenshots/toast.png" alt="Track-change toast" />
 
 </td>
 <td width="33%">
 
-**Taskbar widget**
+**Taskbar widget.** Visualiser bars at ~30fps off an `AnalyserNode`.
 <img src="docs/screenshots/widget.png" alt="Taskbar widget with visualiser" />
 
 </td>
