@@ -55,3 +55,34 @@ export function ArtistCard({ artist }: { artist: ArtistID3 }) {
 export function CardGrid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">{children}</div>
 }
+
+/** Tags (genres, moods) have no artwork on Navidrome, so give each a stable colour from its name. */
+function hue(name: string): number {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360
+  return h
+}
+
+export function TagCard({
+  name,
+  subtitle,
+  onClick,
+  action
+}: {
+  name: string
+  subtitle: string
+  onClick: () => void
+  action?: React.ReactNode
+}) {
+  return (
+    <div
+      className="group relative cursor-pointer overflow-hidden rounded-lg p-4 transition hover:brightness-110"
+      style={{ background: `linear-gradient(135deg, hsl(${hue(name)} 60% 32%), hsl(${(hue(name) + 40) % 360} 55% 18%))` }}
+      onClick={onClick}
+    >
+      <div className="text-base font-bold break-words">{name}</div>
+      <div className="mt-1 text-xs text-white/70">{subtitle}</div>
+      {action}
+    </div>
+  )
+}

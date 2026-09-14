@@ -116,3 +116,24 @@ export function GhostButton({
 export function Empty({ children }: { children: ReactNode }) {
   return <div className="py-16 text-center text-sm text-ink-3">{children}</div>
 }
+
+export function SearchInput({
+  value,
+  onChange,
+  placeholder
+}: {
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+}) {
+  return (
+    <input
+      type="search"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      aria-label={placeholder}
+      className="mb-5 h-8 w-[280px] rounded-full border border-white/10 bg-white/[0.06] px-4 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-accent"
+    />
+  )
+}

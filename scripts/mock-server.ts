@@ -17,9 +17,9 @@ const artists = [
   { id: 'ar2', name: 'Blue Static', albumCount: 1 }
 ]
 const albums = [
-  { id: 'al1', name: 'Northern Lights', artist: 'Aurora Fields', artistId: 'ar1', year: 2021, genre: 'Ambient', songCount: 3, duration: 36, coverArt: 'al1', created: '2024-01-01T00:00:00Z' },
-  { id: 'al2', name: 'Meridian', artist: 'Aurora Fields', artistId: 'ar1', year: 2023, genre: 'Ambient', songCount: 2, duration: 24, coverArt: 'al2', created: '2024-03-01T00:00:00Z' },
-  { id: 'al3', name: 'Signal Loss', artist: 'Blue Static', artistId: 'ar2', year: 2019, genre: 'Electronic', songCount: 2, duration: 24, coverArt: 'al3', created: '2024-02-01T00:00:00Z' }
+  { id: 'al1', name: 'Northern Lights', artist: 'Aurora Fields', artistId: 'ar1', year: 2021, genre: 'Ambient', moods: ['calm', 'dreamy'], songCount: 3, duration: 36, coverArt: 'al1', created: '2024-01-01T00:00:00Z' },
+  { id: 'al2', name: 'Meridian', artist: 'Aurora Fields', artistId: 'ar1', year: 2023, genre: 'Ambient', moods: ['calm'], songCount: 2, duration: 24, coverArt: 'al2', created: '2024-03-01T00:00:00Z' },
+  { id: 'al3', name: 'Signal Loss', artist: 'Blue Static', artistId: 'ar2', year: 2019, genre: 'Electronic', moods: ['energetic'], songCount: 2, duration: 24, coverArt: 'al3', created: '2024-02-01T00:00:00Z' }
 ]
 const songs = [
   { id: 's1', title: 'Dawn Chorus', albumId: 'al1', track: 1, freq: 220 },
@@ -41,6 +41,7 @@ const songs = [
     track: s.track,
     year: album.year,
     genre: album.genre,
+    moods: album.moods,
     coverArt: album.id,
     duration: 12,
     bitRate: 1411,

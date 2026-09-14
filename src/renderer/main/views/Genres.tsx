@@ -1,21 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Play, Shuffle } from 'lucide-react'
 import type { Genre } from '@shared/subsonic/types'
-import { formatDuration } from '@shared/format'
+import { filterTracks, formatDuration } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
 import { TrackList } from '../components/TrackList'
-import { CardGrid } from '../components/AlbumCard'
-import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton } from '../components/ui'
+import { CardGrid, TagCard } from '../components/AlbumCard'
+import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
 import { nav } from '../nav'
 import { useAsync } from '../useAsync'
-
-/** Genres have no artwork on Navidrome, so give each a stable colour derived from its name. */
-function hue(name: string): number {
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360
-  return h
-}
 
 function GenreCard({ genre }: { genre: Genre }) {
   const client = useClient()
@@ -25,23 +18,20 @@ function GenreCard({ genre }: { genre: Genre }) {
     if (songs?.length) player.setQueue(songs, 0, true)
   }
   return (
-    <div
-      className="group relative cursor-pointer overflow-hidden rounded-lg p-4 transition hover:brightness-110"
-      style={{ background: `linear-gradient(135deg, hsl(${hue(genre.value)} 60% 32%), hsl(${(hue(genre.value) + 40) % 360} 55% 18%))` }}
+    <TagCard
+      name={genre.value}
+      subtitle={`${genre.songCount ?? 0} song${genre.songCount === 1 ? '' : 's'}`}
       onClick={() => nav.go({ name: 'genre', value: genre.value })}
-    >
-      <div className="text-base font-bold break-words">{genre.value}</div>
-      <div className="mt-1 text-xs text-white/70">
-        {genre.songCount ?? 0} song{genre.songCount === 1 ? '' : 's'}
-      </div>
-      <button
-        onClick={play}
-        className="absolute right-3 bottom-3 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-accent text-black opacity-0 shadow-xl transition group-hover:translate-y-0 group-hover:opacity-100 hover:scale-105"
-        title="Play genre"
-      >
-        <Play size={18} fill="currentColor" className="ml-0.5" />
-      </button>
-    </div>
+      action={
+        <button
+          onClick={play}
+          className="absolute right-3 bottom-3 flex h-10 w-10 translate-y-2 items-center justify-center rounded-full bg-accent text-black opacity-0 shadow-xl transition group-hover:translate-y-0 group-hover:opacity-100 hover:scale-105"
+          title="Play genre"
+        >
+          <Play size={18} fill="currentColor" className="ml-0.5" />
+        </button>
+      }
+    />
   )
 }
 
@@ -59,12 +49,7 @@ export function Genres() {
   return (
     <div>
       <PageTitle title="Genres" subtitle={state.data ? `${state.data.length} genres` : undefined} />
-      <input
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        placeholder="Filter genres"
-        className="mb-5 h-8 w-[280px] rounded-full border border-white/10 bg-white/[0.06] px-4 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-accent"
-      />
+      <SearchInput value={filter} onChange={setFilter} placeholder="Filter genres" />
       {state.loading && <Loading />}
       {state.error && <ErrorBox message={state.error} onRetry={state.reload} />}
       {state.data && filtered.length === 0 && <Empty>No genres match</Empty>}
@@ -76,10 +61,12 @@ export function Genres() {
 export function GenreView({ value }: { value: string }) {
   const client = useClient()
   const state = useAsync(`genre:${value}`, () => client?.getSongsByGenre(value), [client, value])
+  const [query, setQuery] = useState('')
+  const songs = state.data
+  const shown = useMemo(() => filterTracks(songs ?? [], query), [songs, query])
 
   if (state.loading) return <Loading />
   if (state.error) return <ErrorBox message={state.error} onRetry={state.reload} />
-  const songs = state.data
   if (!songs) return null
   const total = songs.reduce((s, t) => s + t.duration, 0)
 
@@ -106,7 +93,14 @@ export function GenreView({ value }: { value: string }) {
           </>
         }
       />
-      {songs.length === 0 ? <Empty>No songs in this genre</Empty> : <TrackList tracks={songs} />}
+      <SearchInput value={query} onChange={setQuery} placeholder="Search in this genre" />
+      {songs.length === 0 ? (
+        <Empty>No songs in this genre</Empty>
+      ) : shown.length === 0 ? (
+        <Empty>No songs match</Empty>
+      ) : (
+        <TrackList tracks={shown} />
+      )}
     </div>
   )
 }

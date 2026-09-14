@@ -199,6 +199,20 @@ export class SubsonicClient {
     return r.albumList2.album ?? []
   }
 
+  /**
+   * Every album, paged. Subsonic has no endpoint listing moods, so the Moods view derives them
+   * from the album tags; 500 is the per-call ceiling the spec allows.
+   */
+  async getAllAlbums(max = 5000): Promise<AlbumID3[]> {
+    const all: AlbumID3[] = []
+    while (all.length < max) {
+      const page = await this.getAlbumList2('alphabeticalByName', 500, all.length)
+      all.push(...page)
+      if (page.length < 500) break
+    }
+    return all
+  }
+
   async getRandomSongs(size = 50): Promise<Track[]> {
     const r = await this.call<RandomSongsResponse>('getRandomSongs', { size })
     return (r.randomSongs.song ?? []).map(childToTrack)
