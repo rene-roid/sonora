@@ -24,6 +24,72 @@ widget with a live audio visualiser.
 
 ---
 
+## Screenshots
+
+<table>
+<tr>
+<td width="50%">
+
+**Home** — greeting, pinned playlists, recently played and recently added
+<img src="docs/screenshots/home.png" alt="Home" />
+
+</td>
+<td width="50%">
+
+**Album** — multi-disc track list, play/shuffle/queue actions
+<img src="docs/screenshots/album.png" alt="Album view" />
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Lyrics** — synced lyrics that follow the audio between position updates
+<img src="docs/screenshots/lyrics.png" alt="Synced lyrics" />
+
+</td>
+<td width="50%">
+
+**Queue** — reorder, jump, and clear without leaving the current view
+<img src="docs/screenshots/queue.png" alt="Queue panel" />
+
+</td>
+</tr>
+<tr>
+<td colspan="2">
+
+**Soundtracks** — game/film scores split out of the main album grid, multi-disc releases folded into one entry
+<img src="docs/screenshots/soundtracks.png" alt="Soundtracks" />
+
+</td>
+</tr>
+</table>
+
+The extra windows, all fed by the same hidden audio host:
+
+<table>
+<tr>
+<td width="33%">
+
+**Mini-player**
+<img src="docs/screenshots/mini.png" alt="Mini-player" />
+
+</td>
+<td width="33%">
+
+**Track-change toast**
+<img src="docs/screenshots/toast.png" alt="Track-change toast" />
+
+</td>
+<td width="33%">
+
+**Taskbar widget**
+<img src="docs/screenshots/widget.png" alt="Taskbar widget with visualiser" />
+
+</td>
+</tr>
+</table>
+
 ## Features
 
 - 🎵 **Full library UI.** Home, albums, artists, playlists, search, favorites and a queue panel, all backed by the Subsonic API
