@@ -164,7 +164,8 @@ export function TrackList({
   )
 }
 
-function TrackMenu({
+/** Row menu, also used by the now-playing bar. */
+export function TrackMenu({
   pos,
   track,
   starred,
@@ -172,7 +173,7 @@ function TrackMenu({
   onPlay,
   onToggleStar,
   onRemove,
-  removeLabel
+  removeLabel = 'Remove'
 }: {
   pos: { x: number; y: number }
   track: Track
@@ -181,7 +182,7 @@ function TrackMenu({
   onPlay: () => void
   onToggleStar: () => void
   onRemove?: () => void
-  removeLabel: string
+  removeLabel?: string
 }) {
   const client = useClient()
   const [picking, setPicking] = useState(false)
