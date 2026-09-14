@@ -3,6 +3,7 @@ import type { AlbumID3, AlbumListType } from '@shared/subsonic/types'
 import { useClient } from '@renderer/shared/sessionStore'
 import { AlbumCard, CardGrid } from '../components/AlbumCard'
 import { ErrorBox, GhostButton, Loading, PageTitle } from '../components/ui'
+import { RETRY_MS } from '../useAsync'
 
 const SORTS: { key: AlbumListType; label: string }[] = [
   { key: 'alphabeticalByName', label: 'A–Z' },
@@ -36,6 +37,14 @@ export function Albums() {
       setLoading(false)
     }
   }
+
+  // Failed page load retries itself until it lands; the Retry button short-circuits the wait.
+  useEffect(() => {
+    if (!error) return
+    const t = setTimeout(() => void load(albums.length, albums.length === 0), RETRY_MS)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error])
 
   useEffect(() => {
     setAlbums([])
