@@ -1,8 +1,11 @@
-import { Shuffle } from 'lucide-react'
+import { Heart, Shuffle } from 'lucide-react'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
-import { AlbumCard, CardGrid } from '../components/AlbumCard'
+import { Cover } from '@renderer/shared/Cover'
+import { AlbumCard, CardGrid, hue } from '../components/AlbumCard'
 import { ErrorBox, Loading, PrimaryButton, SectionHeader } from '../components/ui'
+import { nav, type View } from '../nav'
+import { useRecents } from '../recents'
 import { useAsync } from '../useAsync'
 import type { AlbumListType } from '@shared/subsonic/types'
 
@@ -19,6 +22,54 @@ function AlbumRow({ title, type }: { title: string; type: AlbumListType }) {
         <CardGrid>{state.data?.map((a) => <AlbumCard key={a.id} album={a} />)}</CardGrid>
       )}
     </section>
+  )
+}
+
+function RecentTile({ title, view, art }: { title: string; view: View; art: React.ReactNode }) {
+  return (
+    <button
+      onClick={() => nav.go(view)}
+      className="flex h-16 items-center gap-3 overflow-hidden rounded-md bg-white/[0.07] text-left transition hover:bg-white/[0.14]"
+    >
+      <div className="h-16 w-16 shrink-0">{art}</div>
+      <div className="line-clamp-2 min-w-0 flex-1 pr-3 text-sm font-semibold leading-tight">{title}</div>
+    </button>
+  )
+}
+
+function RecentGrid() {
+  const items = useRecents((s) => s.items)
+  return (
+    <div className="mb-8 grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-2">
+      <RecentTile
+        title="Liked Songs"
+        view={{ name: 'favorites' }}
+        art={
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-400 to-purple-700">
+            <Heart size={24} fill="currentColor" />
+          </div>
+        }
+      />
+      {items.map((it) => (
+        <RecentTile
+          key={it.key}
+          title={it.title}
+          view={it.view}
+          art={
+            it.coverArt ? (
+              <Cover id={it.coverArt} size={160} className="h-full w-full" rounded="rounded-none" />
+            ) : (
+              <div
+                className="h-full w-full"
+                style={{
+                  background: `linear-gradient(135deg, hsl(${hue(it.title)} 60% 32%), hsl(${(hue(it.title) + 40) % 360} 55% 18%))`
+                }}
+              />
+            )
+          }
+        />
+      ))}
+    </div>
   )
 }
 
@@ -39,6 +90,7 @@ export function Home() {
           <Shuffle size={16} /> Shuffle library
         </PrimaryButton>
       </div>
+      <RecentGrid />
       <AlbumRow title="Recently added" type="newest" />
       <AlbumRow title="Recently played" type="recent" />
       <AlbumRow title="Most played" type="frequent" />

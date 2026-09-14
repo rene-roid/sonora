@@ -5,10 +5,14 @@ import { Cover } from '@renderer/shared/Cover'
 import { AlbumCard, CardGrid } from '../components/AlbumCard'
 import { ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton } from '../components/ui'
 import { useAsync } from '../useAsync'
+import { useRecent } from '../recents'
 
 export function ArtistView({ id }: { id: string }) {
   const client = useClient()
   const state = useAsync(`artist:${id}`, () => client?.getArtist(id), [client, id])
+  useRecent(
+    state.data && { key: `artist:${id}`, view: { name: 'artist', id }, title: state.data.name, coverArt: state.data.coverArt ?? id }
+  )
 
   const playAll = async (shuffle: boolean): Promise<void> => {
     if (!client || !state.data) return
