@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { Play } from 'lucide-react'
 import type { AlbumID3, ArtistID3 } from '@shared/subsonic/types'
+import type { SubsonicClient } from '@shared/subsonic/client'
+import type { Track } from '@shared/types'
 import { parseDiscName } from '@shared/format'
 import { Cover } from '@renderer/shared/Cover'
 import { player } from '@renderer/shared/playerStore'
 import { useClient } from '@renderer/shared/sessionStore'
-import { nav } from '../nav'
+import { nav, type View } from '../nav'
+import { Spinner } from './ui'
 
 /** `discIds` are sibling albums holding the rest of a split multi-disc release, in disc order. */
 export function AlbumCard({ album, discIds }: { album: AlbumID3; discIds?: string[] }) {
@@ -82,12 +86,65 @@ export function TagCard({
   return (
     <div
       className="group relative cursor-pointer overflow-hidden rounded-lg p-4 transition hover:brightness-110"
-      style={{ background: `linear-gradient(135deg, hsl(${hue(name)} 60% 32%), hsl(${(hue(name) + 40) % 360} 55% 18%))` }}
+      style={{ background: gradient(name) }}
       onClick={onClick}
     >
       <div className="text-base font-bold break-words">{name}</div>
       <div className="mt-1 text-xs text-white/70">{subtitle}</div>
       {action}
+    </div>
+  )
+}
+
+export function gradient(name: string): string {
+  return `linear-gradient(135deg, hsl(${hue(name)} 60% 32%), hsl(${(hue(name) + 40) % 360} 55% 18%))`
+}
+
+export function TileGrid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-2">{children}</div>
+}
+
+/** Wide short tile with a hover play button: the "jump back in" shelf at the top of Home. */
+export function Tile({
+  title,
+  view,
+  art,
+  load
+}: {
+  title: string
+  view: View
+  art: React.ReactNode
+  load: (client: SubsonicClient) => Promise<Track[]>
+}) {
+  const client = useClient()
+  const [busy, setBusy] = useState(false)
+  const play = async (e: React.MouseEvent): Promise<void> => {
+    e.stopPropagation()
+    if (!client || busy) return
+    setBusy(true)
+    try {
+      const tracks = await load(client)
+      if (tracks.length) player.setQueue(tracks, 0, true)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="group relative">
+      <button
+        onClick={() => nav.go(view)}
+        className="flex h-16 w-full items-center gap-3 overflow-hidden rounded-md bg-white/[0.07] text-left transition hover:bg-white/[0.14]"
+      >
+        <div className="h-16 w-16 shrink-0">{art}</div>
+        <div className="line-clamp-2 min-w-0 flex-1 pr-14 text-sm font-semibold leading-tight">{title}</div>
+      </button>
+      <button
+        onClick={play}
+        title={`Play ${title}`}
+        className="absolute top-1/2 right-3 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-accent text-black opacity-0 shadow-xl transition group-hover:opacity-100 hover:scale-105 focus-visible:opacity-100"
+      >
+        {busy ? <Spinner className="h-5 w-5" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+      </button>
     </div>
   )
 }

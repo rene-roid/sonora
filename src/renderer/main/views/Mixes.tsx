@@ -1,10 +1,10 @@
+import { Sparkles } from 'lucide-react'
 import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
-import { CardGrid, TagCard } from '../components/AlbumCard'
+import { Tile, TileGrid, gradient } from '../components/AlbumCard'
 import { TrackPage } from '../components/TrackPage'
 import { SectionHeader } from '../components/ui'
 import { buildMix, mixSeeds } from '../mixes'
-import { nav } from '../nav'
 import { useAsync } from '../useAsync'
 
 const mixTitle = (value: string): string => `${capitalize(value)} Mix`
@@ -17,16 +17,24 @@ export function MixRow() {
   return (
     <section className="mb-8">
       <SectionHeader title="Made for you" />
-      <CardGrid>
+      <TileGrid>
         {state.data.map((value) => (
-          <TagCard
+          <Tile
             key={value}
-            name={mixTitle(value)}
-            subtitle="Refreshed daily"
-            onClick={() => nav.go({ name: 'mix', value })}
+            title={mixTitle(value)}
+            view={{ name: 'mix', value }}
+            load={(c) => buildMix(c, value)}
+            art={
+              <div
+                className="flex h-full w-full items-center justify-center"
+                style={{ background: gradient(mixTitle(value)) }}
+              >
+                <Sparkles size={22} />
+              </div>
+            }
           />
         ))}
-      </CardGrid>
+      </TileGrid>
     </section>
   )
 }
