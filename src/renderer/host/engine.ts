@@ -1,5 +1,13 @@
-import type { PlayerCommandName, PlayerCommands, PlayerEvents, RepeatMode, ResumeState, Track } from '@shared/types'
-import { sanitizeResume } from '@shared/types'
+import type {
+  NormalizeMode,
+  PlayerCommandName,
+  PlayerCommands,
+  PlayerEvents,
+  RepeatMode,
+  ResumeState,
+  Track
+} from '@shared/types'
+import { replayGainFactor, sanitizeResume } from '@shared/types'
 import type { SubsonicClient } from '@shared/subsonic/client'
 import { clamp } from '@shared/format'
 
@@ -16,6 +24,8 @@ const FRAME_BINS = 48
 export class AudioEngine {
   private readonly audio = new Audio()
   private ctx: AudioContext | null = null
+  private gain: GainNode | null = null
+  private normalize: NormalizeMode = 'off'
   private analyser: AnalyserNode | null = null
   private analyserData = new Uint8Array(0)
   private readonly bins = new Uint8Array(FRAME_BINS)
@@ -109,15 +119,23 @@ export class AudioEngine {
     if (!wanted) this.stopFrameTimer()
   }
 
+  /** Volume normalisation mode; takes effect on the current track immediately. */
+  setNormalize(mode: NormalizeMode): void {
+    this.normalize = mode
+    this.applyGain()
+  }
+
   restore(opts: {
     volume: number
     muted: boolean
     repeat: RepeatMode
     shuffle: boolean
+    normalize: NormalizeMode
     resume?: ResumeState | null
   }): void {
     this.audio.volume = clamp(opts.volume, 0, 1)
     this.audio.muted = opts.muted
+    this.normalize = opts.normalize
     this.repeat = opts.repeat
     this.shuffle = opts.shuffle
     this.emit('volumeChanged', { volume: this.audio.volume, muted: this.audio.muted })
@@ -261,17 +279,30 @@ export class AudioEngine {
     try {
       this.ctx = new AudioContext()
       const source = this.ctx.createMediaElementSource(this.audio)
+      this.gain = this.ctx.createGain()
       this.analyser = this.ctx.createAnalyser()
       this.analyser.fftSize = 256
       this.analyser.smoothingTimeConstant = 0.75
       this.analyserData = new Uint8Array(this.analyser.frequencyBinCount)
-      source.connect(this.analyser)
+      // Gain sits before the analyser so the visualiser shows what is actually heard.
+      source.connect(this.gain)
+      this.gain.connect(this.analyser)
       this.analyser.connect(this.ctx.destination)
+      this.applyGain()
     } catch (err) {
       console.error('[engine] Web Audio graph failed; playing without visualiser', err)
       this.ctx = null
+      this.gain = null
       this.analyser = null
     }
+  }
+
+  /** Point the gain node at the current track's ReplayGain. No graph means no normalisation. */
+  private applyGain(): void {
+    if (!this.gain || !this.ctx) return
+    const factor = replayGainFactor(this.current?.gain, this.normalize)
+    // Short ramp instead of a step, so switching modes mid-track does not click.
+    this.gain.gain.setTargetAtTime(factor, this.ctx.currentTime, 0.05)
   }
 
   private load(index: number, autoplay: boolean, seek = 0): void {
@@ -281,6 +312,7 @@ export class AudioEngine {
     this.index = index
     this.scrobbleSubmitted = false
     this.pendingSeek = seek
+    this.applyGain()
     this.audio.src = this.client.streamUrl(track.id)
     this.audio.load()
     this.emit('trackChanged', { track, index })
