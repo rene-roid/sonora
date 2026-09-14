@@ -15,8 +15,12 @@ widget with a live audio visualiser.
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Bun](https://img.shields.io/badge/tooling-Bun-f472b6?logo=bun&logoColor=white)](https://bun.sh)
 [![License](https://img.shields.io/badge/license-MIT-blue)](#license)
+[![Status](https://img.shields.io/badge/status-in%20development-orange)](#status)
 
 </div>
+
+> **⚠️ Work in progress.** Sonora is still in active development. Expect rough edges, missing
+> features and breaking changes between commits; there are no stable releases yet.
 
 ---
 
@@ -172,6 +176,10 @@ sonora/
 ├── tests/               # Bun unit tests
 └── resources/           # App and tray icons
 ```
+
+## Status
+
+In development, not production-ready. Issues and PRs welcome.
 
 ## License
 
