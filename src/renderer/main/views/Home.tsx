@@ -6,6 +6,7 @@ import { Cover } from '@renderer/shared/Cover'
 import { AlbumCard, CardGrid, hue } from '../components/AlbumCard'
 import { ErrorBox, Loading, PrimaryButton, SectionHeader, Spinner } from '../components/ui'
 import { nav, type View } from '../nav'
+import { MixRow } from './Mixes'
 import { useAsync } from '../useAsync'
 import type { AlbumListType } from '@shared/subsonic/types'
 import type { SubsonicClient } from '@shared/subsonic/client'
@@ -127,6 +128,7 @@ export function Home() {
         </PrimaryButton>
       </div>
       <RecentGrid />
+      <MixRow />
       <AlbumRow title="Recently added" type="newest" />
       <AlbumRow title="Recently played" type="recent" />
       <AlbumRow title="Most played" type="frequent" />

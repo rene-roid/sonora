@@ -9,6 +9,7 @@ export type View =
   | { name: 'genre'; value: string }
   | { name: 'moods' }
   | { name: 'mood'; value: string }
+  | { name: 'mix'; value: string }
   | { name: 'artist'; id: string }
   /** `discIds` are sibling albums holding the other discs of the same release, in disc order. */
   | { name: 'album'; id: string; discIds?: string[] }

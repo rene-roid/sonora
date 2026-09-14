@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
-import { Play, Shuffle } from 'lucide-react'
+import { Play } from 'lucide-react'
 import type { Genre } from '@shared/subsonic/types'
-import { capitalize, filterTracks, formatDuration } from '@shared/format'
+import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
-import { TrackList } from '../components/TrackList'
 import { CardGrid, TagCard } from '../components/AlbumCard'
-import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
+import { TrackPage } from '../components/TrackPage'
+import { Empty, ErrorBox, Loading, PageTitle, SearchInput } from '../components/ui'
 import { nav } from '../nav'
 import { useAsync } from '../useAsync'
 
@@ -61,46 +61,5 @@ export function Genres() {
 export function GenreView({ value }: { value: string }) {
   const client = useClient()
   const state = useAsync(`genre:${value}`, () => client?.getSongsByGenre(value), [client, value])
-  const [query, setQuery] = useState('')
-  const songs = state.data
-  const shown = useMemo(() => filterTracks(songs ?? [], query), [songs, query])
-
-  if (state.loading) return <Loading />
-  if (state.error) return <ErrorBox message={state.error} onRetry={state.reload} />
-  if (!songs) return null
-  const total = songs.reduce((s, t) => s + t.duration, 0)
-
-  return (
-    <div>
-      <PageTitle
-        eyebrow="Genre"
-        title={capitalize(value)}
-        subtitle={`${songs.length} song${songs.length === 1 ? '' : 's'}, ${formatDuration(total)}`}
-        actions={
-          <>
-            <PrimaryButton onClick={() => player.setQueue(songs, 0, true)} disabled={!songs.length}>
-              <Play size={16} fill="currentColor" /> Play
-            </PrimaryButton>
-            <GhostButton
-              disabled={!songs.length}
-              onClick={() => {
-                player.setShuffle(true)
-                player.setQueue(songs, Math.floor(Math.random() * songs.length), true)
-              }}
-            >
-              <Shuffle size={16} /> Shuffle
-            </GhostButton>
-          </>
-        }
-      />
-      <SearchInput value={query} onChange={setQuery} placeholder="Search in this genre" />
-      {songs.length === 0 ? (
-        <Empty>No songs in this genre</Empty>
-      ) : shown.length === 0 ? (
-        <Empty>No songs match</Empty>
-      ) : (
-        <TrackList tracks={shown} />
-      )}
-    </div>
-  )
+  return <TrackPage eyebrow="Genre" title={capitalize(value)} state={state} />
 }
