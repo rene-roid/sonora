@@ -6,9 +6,11 @@ import { Cover } from '@renderer/shared/Cover'
 import { AlbumCard, CardGrid, hue } from '../components/AlbumCard'
 import { ErrorBox, Loading, PrimaryButton, SectionHeader, Spinner } from '../components/ui'
 import { nav, type View } from '../nav'
-import { tracksFor, useRecents } from '../recents'
+import { useRecents } from '../recents'
 import { useAsync } from '../useAsync'
 import type { AlbumListType } from '@shared/subsonic/types'
+import type { SubsonicClient } from '@shared/subsonic/client'
+import type { Track } from '@shared/types'
 
 function AlbumRow({ title, type }: { title: string; type: AlbumListType }) {
   const client = useClient()
@@ -26,7 +28,17 @@ function AlbumRow({ title, type }: { title: string; type: AlbumListType }) {
   )
 }
 
-function RecentTile({ title, view, art }: { title: string; view: View; art: React.ReactNode }) {
+function RecentTile({
+  title,
+  view,
+  art,
+  load
+}: {
+  title: string
+  view: View
+  art: React.ReactNode
+  load: (client: SubsonicClient) => Promise<Track[]>
+}) {
   const client = useClient()
   const [busy, setBusy] = useState(false)
   const play = async (e: React.MouseEvent): Promise<void> => {
@@ -34,7 +46,7 @@ function RecentTile({ title, view, art }: { title: string; view: View; art: Reac
     if (!client || busy) return
     setBusy(true)
     try {
-      const tracks = await tracksFor(client, view)
+      const tracks = await load(client)
       if (tracks.length) player.setQueue(tracks, 0, true)
     } finally {
       setBusy(false)
@@ -67,6 +79,7 @@ function RecentGrid() {
       <RecentTile
         title="Liked Songs"
         view={{ name: 'favorites' }}
+        load={async (c) => (await c.getStarred2()).songs}
         art={
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-400 to-purple-700">
             <Heart size={24} fill="currentColor" />
@@ -75,9 +88,10 @@ function RecentGrid() {
       />
       {items.map((it) => (
         <RecentTile
-          key={it.key}
+          key={it.id}
           title={it.title}
-          view={it.view}
+          view={{ name: 'album', id: it.id }}
+          load={async (c) => (await c.getAlbum(it.id)).song}
           art={
             it.coverArt ? (
               <Cover id={it.coverArt} size={160} className="h-full w-full" rounded="rounded-none" />

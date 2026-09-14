@@ -10,7 +10,6 @@ import { Cover } from '@renderer/shared/Cover'
 import { TrackList } from '../components/TrackList'
 import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
 import { useAsync } from '../useAsync'
-import { useRecent } from '../recents'
 import { nav } from '../nav'
 
 /**
@@ -34,9 +33,6 @@ export function AlbumView({ id, discIds }: { id: string; discIds?: string[] }) {
   const key = ids.join(',')
   const state = useAsync(`album:${key}`, () => (client ? loadAlbum(client, ids) : undefined), [client, key])
   const [query, setQuery] = useState('')
-  useRecent(
-    state.data && { key: `album:${key}`, view: { name: 'album', id, discIds }, title: state.data.name, coverArt: state.data.coverArt ?? id }
-  )
   const shown = useMemo(() => filterTracks(state.data?.song ?? [], query), [state.data, query])
 
   if (state.loading) return <Loading />

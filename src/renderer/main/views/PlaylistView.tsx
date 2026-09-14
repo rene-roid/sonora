@@ -6,19 +6,10 @@ import { Cover } from '@renderer/shared/Cover'
 import { TrackList } from '../components/TrackList'
 import { ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton } from '../components/ui'
 import { useAsync } from '../useAsync'
-import { useRecent } from '../recents'
 
 export function PlaylistView({ id }: { id: string }) {
   const client = useClient()
   const state = useAsync(`playlist:${id}`, () => client?.getPlaylist(id), [client, id])
-  useRecent(
-    state.data && {
-      key: `playlist:${id}`,
-      view: { name: 'playlist', id },
-      title: state.data.name,
-      coverArt: state.data.coverArt ?? state.data.entry[0]?.coverArt
-    }
-  )
 
   if (state.loading) return <Loading />
   if (state.error) return <ErrorBox message={state.error} onRetry={state.reload} />

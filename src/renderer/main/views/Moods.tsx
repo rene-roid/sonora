@@ -6,7 +6,6 @@ import { AlbumCard, CardGrid, TagCard } from '../components/AlbumCard'
 import { Empty, ErrorBox, Loading, PageTitle, SearchInput } from '../components/ui'
 import { nav } from '../nav'
 import { useAsync, type AsyncState } from '../useAsync'
-import { useRecent } from '../recents'
 
 /**
  * Subsonic has no mood endpoint, so both views work off one cached pass over the album list and
@@ -57,7 +56,6 @@ export function Moods() {
 
 export function MoodView({ value }: { value: string }) {
   const state = useAlbums()
-  useRecent({ key: `mood:${value}`, view: { name: 'mood', value }, title: capitalize(value) })
   const [query, setQuery] = useState('')
 
   const albums = useMemo(() => (state.data ?? []).filter((a) => a.moods?.includes(value)), [state.data, value])

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import type { Track } from '../src/shared/types'
 
 const store = new Map<string, string>()
 ;(globalThis as { localStorage?: unknown }).localStorage = {
@@ -11,23 +12,30 @@ const store = new Map<string, string>()
   }
 }
 
-const { recordRecent, useRecents } = await import('../src/renderer/main/recents')
-const keys = (): string[] => useRecents.getState().items.map((i) => i.key)
-const visit = (key: string): void => recordRecent({ key, view: { name: 'album', id: key }, title: key })
+const { recordPlayed, useRecents } = await import('../src/renderer/main/recents')
+const ids = (): string[] => useRecents.getState().items.map((i) => i.id)
+const track = (albumId?: string): Track =>
+  ({ id: `t-${albumId}`, title: 't', artist: 'a', album: `Album ${albumId}`, albumId, duration: 1 }) as Track
 
 describe('recents', () => {
   beforeEach(() => useRecents.setState({ items: [] }))
 
   test('newest first, no duplicates, capped', () => {
-    for (const k of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) visit(k)
-    expect(keys()).toEqual(['h', 'g', 'f', 'e', 'd', 'c', 'b'])
-    visit('c')
-    expect(keys()).toEqual(['c', 'h', 'g', 'f', 'e', 'd', 'b'])
+    for (const k of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']) recordPlayed(track(k))
+    expect(ids()).toEqual(['h', 'g', 'f', 'e', 'd', 'c', 'b'])
+    recordPlayed(track('c'))
+    expect(ids()).toEqual(['c', 'h', 'g', 'f', 'e', 'd', 'b'])
+  })
+
+  test('ignores tracks with no album', () => {
+    recordPlayed(track(undefined))
+    recordPlayed(null)
+    expect(ids()).toEqual([])
   })
 
   test('survives a reload', () => {
-    visit('a')
+    recordPlayed(track('a'))
     useRecents.setState({ items: [] })
-    expect(JSON.parse(store.get('sonora.cache.recents')!)[0].key).toBe('a')
+    expect(JSON.parse(store.get('sonora.recents')!)[0].id).toBe('a')
   })
 })

@@ -9,7 +9,6 @@ import { CardGrid, TagCard } from '../components/AlbumCard'
 import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
 import { nav } from '../nav'
 import { useAsync } from '../useAsync'
-import { useRecent } from '../recents'
 
 function GenreCard({ genre }: { genre: Genre }) {
   const client = useClient()
@@ -62,7 +61,6 @@ export function Genres() {
 export function GenreView({ value }: { value: string }) {
   const client = useClient()
   const state = useAsync(`genre:${value}`, () => client?.getSongsByGenre(value), [client, value])
-  useRecent({ key: `genre:${value}`, view: { name: 'genre', value }, title: capitalize(value) })
   const [query, setQuery] = useState('')
   const songs = state.data
   const shown = useMemo(() => filterTracks(songs ?? [], query), [songs, query])
