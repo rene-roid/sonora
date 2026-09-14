@@ -1,21 +1,9 @@
-import { Menu, Tray, app, nativeImage } from 'electron'
-import { join } from 'node:path'
-import { existsSync } from 'node:fs'
+import { Menu, Tray, app } from 'electron'
 import { getSettings, onSettingsChange, updateSettings } from './store'
-import { getWindow, setWidgetEnabled, showMainWindow } from './windows'
+import { getWindow, resourceImage, setWidgetEnabled, showMainWindow } from './windows'
 import { playerState, sendCommand } from './ipc'
 
 let tray: Tray | undefined
-
-function trayIcon(): Electron.NativeImage {
-  const candidates = [
-    join(process.resourcesPath ?? '', 'tray.png'),
-    join(__dirname, '../../resources/tray.png'),
-    join(app.getAppPath(), 'resources/tray.png')
-  ]
-  for (const p of candidates) if (p && existsSync(p)) return nativeImage.createFromPath(p)
-  return nativeImage.createEmpty()
-}
 
 export function rebuildTrayMenu(): void {
   if (!tray) return
@@ -63,7 +51,7 @@ export function rebuildTrayMenu(): void {
 }
 
 export function createTray(): Tray {
-  tray = new Tray(trayIcon())
+  tray = new Tray(resourceImage('tray.png'))
   tray.on('click', () => {
     const main = getWindow('main')
     if (main?.isVisible() && main.isFocused()) main.hide()

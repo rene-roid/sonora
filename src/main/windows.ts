@@ -1,5 +1,6 @@
-import { BrowserWindow, screen, shell, type BrowserWindowConstructorOptions } from 'electron'
+import { BrowserWindow, app, nativeImage, screen, shell, type BrowserWindowConstructorOptions } from 'electron'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { is } from '@electron-toolkit/utils'
 import type { Rect, WindowName } from '@shared/types'
 import { getSettings, updateSettings } from './store'
@@ -37,9 +38,22 @@ function loadPage(win: BrowserWindow, page: WindowName): void {
   }
 }
 
+/** Resolve an image from resources/ in both dev and packaged builds. */
+export function resourceImage(file: string): Electron.NativeImage {
+  const candidates = [
+    join(process.resourcesPath ?? '', file),
+    join(__dirname, '../../resources', file),
+    join(app.getAppPath(), 'resources', file)
+  ]
+  for (const p of candidates) if (p && existsSync(p)) return nativeImage.createFromPath(p)
+  return nativeImage.createEmpty()
+}
+
 function baseOptions(name: WindowName): BrowserWindowConstructorOptions {
+  const icon = resourceImage('icon.png')
   return {
     show: false,
+    ...(icon.isEmpty() ? {} : { icon }),
     webPreferences: {
       preload: preloadPath(),
       sandbox: false,
