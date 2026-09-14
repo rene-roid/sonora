@@ -183,6 +183,50 @@ function NormalizeSetting({ value, onChange }: { value: NormalizeMode; onChange:
   )
 }
 
+/** Disk budget for downloaded songs, plus what is on disk right now. */
+function SongCache({ maxGb, onChange }: { maxGb: number; onChange: (v: number) => void }) {
+  const [used, setUsed] = useState<{ bytes: number; count: number }>()
+  const refresh = useCallback((): void => {
+    void window.sonora.cache.stats().then(setUsed)
+  }, [])
+  useEffect(refresh, [refresh])
+
+  return (
+    <section className="mb-8">
+      <SectionHeader
+        title="Song cache"
+        action={
+          <GhostButton onClick={() => void window.sonora.cache.clear().then(refresh)}>Clear cache</GhostButton>
+        }
+      />
+      <p className="mb-3 px-3 text-xs text-ink-3">
+        Songs you play are kept on disk and reused next time. Playback starts streaming straight away and moves over
+        to the local copy as soon as it has downloaded. Once the limit is reached, the songs played longest ago are
+        deleted first.
+      </p>
+      <label className="flex items-center justify-between gap-6 px-3 py-3">
+        <div>
+          <div className="text-sm font-medium">Disk limit</div>
+          <div className="text-xs text-ink-2">
+            {maxGb === 0 ? 'Off \u2014 nothing is kept on disk' : `${maxGb} GB`}
+            {used && ` \u00b7 ${(used.bytes / 1024 ** 3).toFixed(2)} GB used by ${used.count} songs`}
+          </div>
+        </div>
+        <input
+          type="range"
+          className="range w-40"
+          min={0}
+          max={50}
+          step={1}
+          value={maxGb}
+          onChange={(e) => onChange(Number(e.target.value))}
+          onMouseUp={refresh}
+        />
+      </label>
+    </section>
+  )
+}
+
 export function SettingsView() {
   const settings = useSettings()
   const session = useSessionStore((s) => s.session)
@@ -242,6 +286,8 @@ export function SettingsView() {
         <SectionHeader title="Playback" />
         <NormalizeSetting value={settings.normalize} onChange={(normalize) => update({ normalize })} />
       </section>
+
+      <SongCache maxGb={settings.cacheMaxGb} onChange={(cacheMaxGb) => update({ cacheMaxGb })} />
 
       <section className="mb-8">
         <SectionHeader title="Behaviour" />

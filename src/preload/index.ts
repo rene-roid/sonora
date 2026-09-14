@@ -99,6 +99,19 @@ const api = {
     }
   },
 
+  /** On-disk song cache. `want` is the audio host's; the rest drive the settings panel. */
+  cache: {
+    want(id: string, url: string): Promise<Uint8Array | null> {
+      return ipcRenderer.invoke('cache:want', id, url)
+    },
+    stats(): Promise<{ bytes: number; count: number }> {
+      return ipcRenderer.invoke('cache:stats')
+    },
+    clear(): Promise<void> {
+      return ipcRenderer.invoke('cache:clear')
+    }
+  },
+
   window: {
     minimize: (): void => ipcRenderer.send('window:control', 'minimize'),
     maximize: (): void => ipcRenderer.send('window:control', 'maximize'),

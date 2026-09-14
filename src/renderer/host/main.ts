@@ -15,7 +15,7 @@ function log(msg: string): void {
   logEl.textContent = lines.join('\n')
 }
 
-const { host, auth, settings } = window.sonora
+const { host, auth, cache, settings } = window.sonora
 
 const engine = new AudioEngine((event, payload) => {
   host.emit(event, payload)
@@ -36,6 +36,8 @@ host.onCommand((cmd, payload) => {
 })
 
 host.onFramesWanted((wanted) => engine.setFramesWanted(wanted))
+
+engine.fetchCached = (id, url) => cache.want(id, url)
 
 async function boot(): Promise<void> {
   const s = await settings.get()
