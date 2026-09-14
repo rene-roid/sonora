@@ -17,8 +17,7 @@ import { PlaylistView } from './views/PlaylistView'
 import { SearchView } from './views/SearchView'
 import { Favorites } from './views/Favorites'
 import { SettingsView } from './views/SettingsView'
-import { player, usePlayerState, usePlayerStore } from '@renderer/shared/playerStore'
-import { recordPlayed } from './recents'
+import { player, usePlayerStore } from '@renderer/shared/playerStore'
 
 function Content() {
   const view = useNav((s) => s.view)
@@ -58,12 +57,6 @@ export function Shell() {
   const showQueue = useNav((s) => s.showQueue)
   const showLyrics = useNav((s) => s.showLyrics)
   const view = useNav((s) => s.view)
-
-  // Home's recent tiles come from what actually played.
-  const track = usePlayerState((s) => s.track)
-  useEffect(() => {
-    recordPlayed(track)
-  }, [track?.id])
 
   // Space toggles playback unless typing in an input.
   useEffect(() => {

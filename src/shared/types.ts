@@ -132,6 +132,28 @@ export function sanitizeResume(r: ResumeState | null | undefined): ResumeState |
   return { queue: r.queue, index, position }
 }
 
+/** An album the user listened to, as shown by Home's recent tiles. */
+export interface RecentAlbum {
+  id: string
+  title: string
+  artist?: string
+  coverArt?: string
+}
+
+const RECENTS_LIMIT = 7
+
+/** Play history, newest first, deduped and capped. Returns `items` untouched when nothing changed. */
+export function pushRecent(items: RecentAlbum[], track: Track | null | undefined): RecentAlbum[] {
+  if (!track?.albumId || items[0]?.id === track.albumId) return items
+  const item: RecentAlbum = {
+    id: track.albumId,
+    title: track.album,
+    artist: track.artist,
+    coverArt: track.coverArt
+  }
+  return [item, ...items.filter((i) => i.id !== item.id)].slice(0, RECENTS_LIMIT)
+}
+
 export type WindowName = 'main' | 'host' | 'toast' | 'mini' | 'widget'
 
 export interface Rect {
@@ -156,6 +178,8 @@ export interface Settings {
   windowBounds: Partial<Record<WindowName, Rect>>
   /** Queue and playback position saved on quit so the next launch picks up where it left off. */
   resume: ResumeState | null
+  /** Albums played recently, newest first; Home's recent tiles. Cleared when the account changes. */
+  recents: RecentAlbum[]
 }
 
 export const defaultSettings: Settings = {
@@ -170,7 +194,8 @@ export const defaultSettings: Settings = {
   normalize: 'album',
   toastDurationMs: 3500,
   windowBounds: {},
-  resume: null
+  resume: null,
+  recents: []
 }
 
 export interface LyricLine {

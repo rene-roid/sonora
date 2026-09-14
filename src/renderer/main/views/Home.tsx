@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { Heart, Play, Shuffle } from 'lucide-react'
-import { useClient } from '@renderer/shared/sessionStore'
+import { useClient, useSettings } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
 import { Cover } from '@renderer/shared/Cover'
 import { AlbumCard, CardGrid, hue } from '../components/AlbumCard'
 import { ErrorBox, Loading, PrimaryButton, SectionHeader, Spinner } from '../components/ui'
 import { nav, type View } from '../nav'
-import { useRecents } from '../recents'
 import { useAsync } from '../useAsync'
 import type { AlbumListType } from '@shared/subsonic/types'
 import type { SubsonicClient } from '@shared/subsonic/client'
@@ -73,7 +72,7 @@ function RecentTile({
 }
 
 function RecentGrid() {
-  const items = useRecents((s) => s.items)
+  const items = useSettings().recents
   return (
     <div className="mb-8 grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-2">
       <RecentTile

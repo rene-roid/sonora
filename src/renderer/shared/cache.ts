@@ -18,9 +18,6 @@ function clear(): void {
 export function setCacheScope(scope: string): void {
   if (localStorage.getItem(SCOPE_KEY) === scope) return
   clear()
-  // ponytail: wipes the stored play history, but a live account switch leaves the in-memory list
-  // until reload. Give recents a reset hook if that ever shows.
-  localStorage.removeItem('sonora.recents')
   localStorage.setItem(SCOPE_KEY, scope)
 }
 
