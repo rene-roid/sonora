@@ -14,6 +14,13 @@ win:
       arch: [x64]
   icon: resources/icon.png
   artifactName: ${productName}-${version}-setup.${ext}
+linux:
+  target:
+    - AppImage
+    - deb
+  category: AudioVideo
+  icon: resources/icon.png
+  artifactName: ${productName}-${version}.${ext}
 nsis:
   oneClick: false
   perMachine: false
