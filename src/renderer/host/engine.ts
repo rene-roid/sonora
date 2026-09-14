@@ -45,6 +45,10 @@ export class AudioEngine {
   private scrobbleSubmitted = false
   /** Seconds to jump to once the next source reports its metadata (restored position). */
   private pendingSeek = 0
+  /** Object URL of the cached copy currently playing, so it can be revoked when it is replaced. */
+  private localUrl: string | null = null
+  /** Bumped on every load, so a cache download that lands late cannot hijack a newer track. */
+  private localToken = 0
 
   constructor(private readonly emit: Emit) {
     const a = this.audio
@@ -85,12 +89,22 @@ export class AudioEngine {
    */
   recover?: () => Promise<boolean>
 
+  /** Pulls a track into the on-disk cache and resolves with its bytes. Undefined disables caching. */
+  fetchCached?: (id: string, url: string) => Promise<Uint8Array | null>
+
   private async onAudioError(): Promise<void> {
     const a = this.audio
     const code = a.error?.code
     const track = this.current
     const at = Number.isFinite(a.currentTime) ? a.currentTime : 0
     const wasPlaying = !a.paused
+    // A bad cached copy is not a server problem: drop back to the stream and stay on this track.
+    if (track && this.client && this.localUrl && a.src === this.localUrl) {
+      this.localToken += 1 // no second swap, the same bytes would fail again
+      this.releaseLocal()
+      this.swapSrc(this.client.streamUrl(track.id), at, wasPlaying)
+      return
+    }
     this.consecutiveErrors += 1
     // A server that dropped off the network errors on every track, so retry the same one elsewhere
     // before burning through the queue.
@@ -313,8 +327,10 @@ export class AudioEngine {
     this.scrobbleSubmitted = false
     this.pendingSeek = seek
     this.applyGain()
-    this.audio.src = this.client.streamUrl(track.id)
+    const url = this.client.streamUrl(track.id)
+    this.audio.src = url
     this.audio.load()
+    this.cacheAhead(track, url)
     this.emit('trackChanged', { track, index })
     this.emit('positionUpdate', { position: seek, duration: track.duration })
     if (autoplay) {
@@ -334,8 +350,49 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Play `src` from `at` seconds. Swapping the element's source costs one media load, which is
+   * why this is only used for the cached copy, never mid-stream.
+   */
+  private swapSrc(src: string, at: number, play: boolean): void {
+    this.pendingSeek = at
+    this.audio.src = src
+    this.audio.load()
+    if (play) void this.safePlay()
+  }
+
+  private releaseLocal(): void {
+    if (this.localUrl) URL.revokeObjectURL(this.localUrl)
+    this.localUrl = null
+  }
+
+  /**
+   * Download the track we just started streaming, then hand playback over to the local copy so
+   * the rest of it cannot stutter. Late or stale downloads are dropped.
+   */
+  private cacheAhead(track: Track, url: string): void {
+    const token = (this.localToken += 1)
+    this.releaseLocal()
+    if (!this.fetchCached) return
+    void this.fetchCached(track.id, url)
+      .then((bytes) => {
+        const a = this.audio
+        if (!bytes?.length || token !== this.localToken) return
+        // Nothing left to protect from a stutter, and the swap itself would be audible.
+        if (Number.isFinite(a.duration) && a.duration - a.currentTime < 10) return
+        // An already-cached track can land before loadedmetadata has applied a restored
+        // position, so a seek that is still pending outranks the element's own clock.
+        const at = this.pendingSeek > 0 ? this.pendingSeek : a.currentTime
+        this.localUrl = URL.createObjectURL(new Blob([bytes as BlobPart]))
+        this.swapSrc(this.localUrl, at, !a.paused)
+      })
+      .catch(() => undefined)
+  }
+
   private stop(): void {
     this.audio.pause()
+    this.localToken += 1
+    this.releaseLocal()
     this.audio.removeAttribute('src')
     this.audio.load()
     this.queue = []

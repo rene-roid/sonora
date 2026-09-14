@@ -180,6 +180,8 @@ export interface Settings {
   resume: ResumeState | null
   /** Albums played recently, newest first; Home's recent tiles. Cleared when the account changes. */
   recents: RecentAlbum[]
+  /** Disk budget for cached songs, in GB. 0 turns caching off. */
+  cacheMaxGb: number
 }
 
 export const defaultSettings: Settings = {
@@ -195,7 +197,8 @@ export const defaultSettings: Settings = {
   toastDurationMs: 3500,
   windowBounds: {},
   resume: null,
-  recents: []
+  recents: [],
+  cacheMaxGb: 5
 }
 
 export interface LyricLine {

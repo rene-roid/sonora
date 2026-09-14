@@ -18,6 +18,7 @@ import {
   probeServers,
   type ServerProbe
 } from '@shared/subsonic/client'
+import * as audioCache from './audioCache'
 import { setAutoLaunch } from './autolaunch'
 import { clearSession, loadSession, saveSession } from './credentials'
 import { getSettings, updateSettings } from './store'
@@ -225,9 +226,24 @@ export function setupIpc(): void {
     if (patch.autoLaunch !== undefined) {
       setAutoLaunch(patch.autoLaunch)
     }
+    // A smaller budget has to take effect now, not at the next download.
+    if (patch.cacheMaxGb !== undefined && patch.cacheMaxGb < before.cacheMaxGb) void audioCache.evict()
     broadcast('settings:changed', [next])
     return next
   })
+
+  // ---- song cache ----------------------------------------------------------
+  /** Only the audio host may ask, and only for a URL on one of this session's own servers. */
+  ipcMain.handle('cache:want', (e, id: string, url: string): Promise<Buffer | null> => {
+    const session = loadSession()
+    const servers = session ? session.servers ?? [session.server] : []
+    if (windowNameOf(e.sender.id) !== 'host' || !servers.some((s) => url.startsWith(`${s}/`))) {
+      return Promise.resolve(null)
+    }
+    return audioCache.bytes(id, url)
+  })
+  ipcMain.handle('cache:stats', () => audioCache.stats())
+  ipcMain.handle('cache:clear', () => audioCache.clear())
 
   // ---- windows -------------------------------------------------------------
   ipcMain.on('window:control', (e, action: 'minimize' | 'maximize' | 'close' | 'hide' | 'showMain' | 'toastShown' | 'toastDone') => {
