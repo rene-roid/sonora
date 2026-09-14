@@ -8,7 +8,7 @@ import { useAsync } from '../useAsync'
 
 export function Favorites() {
   const client = useClient()
-  const state = useAsync(() => client?.getStarred2(), [client])
+  const state = useAsync('starred', () => client?.getStarred2(), [client])
   if (state.loading) return <Loading />
   if (state.error) return <ErrorBox message={state.error} onRetry={state.reload} />
   const r = state.data

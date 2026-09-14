@@ -8,7 +8,7 @@ import { useAsync } from '../useAsync'
 
 export function ArtistView({ id }: { id: string }) {
   const client = useClient()
-  const state = useAsync(() => client?.getArtist(id), [client, id])
+  const state = useAsync(`artist:${id}`, () => client?.getArtist(id), [client, id])
 
   const playAll = async (shuffle: boolean): Promise<void> => {
     if (!client || !state.data) return

@@ -56,7 +56,6 @@ export function NowPlayingBar() {
           >
             <Shuffle size={16} />
           </button>
-          <FavoriteButton />
           <TransportControls size={18} />
           <button
             className={`icon-btn h-8 w-8 ${repeat !== 'off' ? 'text-accent hover:text-accent' : ''}`}
@@ -94,6 +93,7 @@ export function NowPlayingBar() {
       </div>
 
       <div className="flex items-center justify-end gap-1">
+        <FavoriteButton />
         <button
           className={`icon-btn h-8 w-8 ${showLyrics ? 'text-accent hover:text-accent' : ''}`}
           onClick={nav.toggleLyrics}

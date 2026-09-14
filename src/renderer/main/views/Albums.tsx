@@ -4,6 +4,7 @@ import { useClient } from '@renderer/shared/sessionStore'
 import { AlbumCard, CardGrid } from '../components/AlbumCard'
 import { ErrorBox, GhostButton, Loading, PageTitle } from '../components/ui'
 import { RETRY_MS } from '../useAsync'
+import { cacheRead, cacheWrite } from '@renderer/shared/cache'
 
 const SORTS: { key: AlbumListType; label: string }[] = [
   { key: 'alphabeticalByName', label: 'A–Z' },
@@ -15,13 +16,17 @@ const SORTS: { key: AlbumListType; label: string }[] = [
 
 const PAGE = 60
 
+/** Only the first page is cached; the rest is cheap to re-page once the user scrolls again. */
+const firstPage = (sort: AlbumListType): AlbumID3[] => cacheRead<AlbumID3[]>(`albums:${sort}`) ?? []
+
 export function Albums() {
   const client = useClient()
   const [sort, setSort] = useState<AlbumListType>('alphabeticalByName')
-  const [albums, setAlbums] = useState<AlbumID3[]>([])
+  const [albums, setAlbums] = useState<AlbumID3[]>(() => firstPage('alphabeticalByName'))
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
-  const [error, setError] = useState<string>()
+  // Remembers which page failed, since a cached first page makes albums.length a bad guess for the retry offset.
+  const [error, setError] = useState<{ message: string; offset: number; reset: boolean }>()
 
   const load = async (offset: number, reset: boolean): Promise<void> => {
     if (!client) return
@@ -29,10 +34,11 @@ export function Albums() {
     setError(undefined)
     try {
       const page = await client.getAlbumList2(sort, PAGE, offset)
+      if (reset) cacheWrite(`albums:${sort}`, page)
       setAlbums((prev) => (reset ? page : [...prev, ...page]))
       setDone(page.length < PAGE)
     } catch (e) {
-      setError((e as Error).message)
+      setError({ message: (e as Error).message, offset, reset })
     } finally {
       setLoading(false)
     }
@@ -41,13 +47,13 @@ export function Albums() {
   // Failed page load retries itself until it lands; the Retry button short-circuits the wait.
   useEffect(() => {
     if (!error) return
-    const t = setTimeout(() => void load(albums.length, albums.length === 0), RETRY_MS)
+    const t = setTimeout(() => void load(error.offset, error.reset), RETRY_MS)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [error])
 
   useEffect(() => {
-    setAlbums([])
+    setAlbums(firstPage(sort))
     setDone(false)
     void load(0, true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -63,7 +69,7 @@ export function Albums() {
           </GhostButton>
         ))}
       </div>
-      {error && <ErrorBox message={error} onRetry={() => load(albums.length, false)} />}
+      {error && <ErrorBox message={error.message} onRetry={() => load(error.offset, error.reset)} />}
       <CardGrid>{albums.map((a, i) => <AlbumCard key={`${a.id}-${i}`} album={a} />)}</CardGrid>
       {loading && <Loading />}
       {!loading && !done && albums.length > 0 && (

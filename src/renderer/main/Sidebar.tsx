@@ -24,7 +24,7 @@ function NavItem({ view, icon, label }: { view: View; icon: ReactNode; label: st
 export function Sidebar() {
   const client = useClient()
   const session = useSessionStore((s) => s.session)
-  const playlists = useAsync(() => client?.getPlaylists(), [client])
+  const playlists = useAsync('playlists', () => client?.getPlaylists(), [client])
 
   return (
     <aside className="flex w-[232px] shrink-0 flex-col border-r border-stroke bg-surface">

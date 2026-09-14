@@ -9,7 +9,7 @@ import { useAsync } from '../useAsync'
 
 export function PlaylistView({ id }: { id: string }) {
   const client = useClient()
-  const state = useAsync(() => client?.getPlaylist(id), [client, id])
+  const state = useAsync(`playlist:${id}`, () => client?.getPlaylist(id), [client, id])
 
   if (state.loading) return <Loading />
   if (state.error) return <ErrorBox message={state.error} onRetry={state.reload} />

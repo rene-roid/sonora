@@ -6,7 +6,7 @@ import { useAsync } from '../useAsync'
 
 export function Artists() {
   const client = useClient()
-  const state = useAsync(() => client?.getArtists(), [client])
+  const state = useAsync('artists', () => client?.getArtists(), [client])
   const [filter, setFilter] = useState('')
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase()

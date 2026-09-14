@@ -10,7 +10,7 @@ import { nav } from '../nav'
 
 export function AlbumView({ id }: { id: string }) {
   const client = useClient()
-  const state = useAsync(() => client?.getAlbum(id), [client, id])
+  const state = useAsync(`album:${id}`, () => client?.getAlbum(id), [client, id])
 
   if (state.loading) return <Loading />
   if (state.error) return <ErrorBox message={state.error} onRetry={state.reload} />

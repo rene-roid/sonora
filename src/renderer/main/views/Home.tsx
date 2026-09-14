@@ -8,7 +8,7 @@ import type { AlbumListType } from '@shared/subsonic/types'
 
 function AlbumRow({ title, type }: { title: string; type: AlbumListType }) {
   const client = useClient()
-  const state = useAsync(() => client?.getAlbumList2(type, 12), [client, type])
+  const state = useAsync(`list:${type}`, () => client?.getAlbumList2(type, 12), [client, type])
   if (state.error) return <ErrorBox message={state.error} onRetry={state.reload} />
   return (
     <section className="mb-8">

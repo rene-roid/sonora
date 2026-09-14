@@ -6,7 +6,7 @@ import { useAsync } from '../useAsync'
 
 export function SearchView({ query }: { query: string }) {
   const client = useClient()
-  const state = useAsync(() => (query ? client?.search3(query) : undefined), [client, query])
+  const state = useAsync(undefined, () => (query ? client?.search3(query) : undefined), [client, query])
 
   if (!query) return <Empty>Type to search your library</Empty>
   if (state.loading) return <Loading />

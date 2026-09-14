@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Session, Settings } from '@shared/types'
 import { defaultSettings } from '@shared/types'
 import { SubsonicClient } from '@shared/subsonic/client'
+import { setCacheScope } from './cache'
 
 interface SessionState {
   loaded: boolean
@@ -23,8 +24,10 @@ export function initSessionBridge(): void {
   if (initialised) return
   initialised = true
   const set = useSessionStore.setState
-  const apply = (session: Session | null): void =>
+  const apply = (session: Session | null): void => {
+    setCacheScope(session ? `${session.server}|${session.username}` : '')
     set({ loaded: true, session, client: session ? new SubsonicClient(session) : null })
+  }
 
   void window.sonora.auth.getSession().then(apply)
   window.sonora.auth.onChange(apply)
