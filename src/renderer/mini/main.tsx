@@ -15,7 +15,7 @@ function MiniPlayer() {
     <div className="h-full w-full p-1.5">
       <div className="acrylic drag relative flex h-full w-full items-center gap-3 p-2.5 pr-3">
         <Cover id={track?.coverArt} size={200} className="h-[84px] w-[84px]" />
-        <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch py-0.5">
+        <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch">
           <div className="min-w-0 pr-12">
             <div className="truncate text-[14px] font-semibold leading-tight">{track?.title ?? 'Nothing playing'}</div>
             <div className="truncate text-[12px] text-ink-2">{track?.artist ?? 'Pick something in Sonora'}</div>
