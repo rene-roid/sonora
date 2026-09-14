@@ -7,6 +7,9 @@ export interface AsyncState<T> {
   reload: () => void
 }
 
+/** Retry delay after a failed load, in ms. */
+export const RETRY_MS = 5000
+
 export function useAsync<T>(fn: () => Promise<T> | undefined, deps: DependencyList): AsyncState<T> {
   const [data, setData] = useState<T>()
   const [error, setError] = useState<string>()
@@ -15,6 +18,7 @@ export function useAsync<T>(fn: () => Promise<T> | undefined, deps: DependencyLi
 
   useEffect(() => {
     let cancelled = false
+    let retry: ReturnType<typeof setTimeout> | undefined
     const p = fn()
     if (!p) {
       setLoading(false)
@@ -32,10 +36,12 @@ export function useAsync<T>(fn: () => Promise<T> | undefined, deps: DependencyLi
         if (cancelled) return
         setError(e.message ?? String(e))
         setLoading(false)
+        retry = setTimeout(() => setTick((t) => t + 1), RETRY_MS)
       }
     )
     return () => {
       cancelled = true
+      clearTimeout(retry)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, tick])

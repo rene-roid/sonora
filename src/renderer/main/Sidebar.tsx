@@ -38,7 +38,17 @@ export function Sidebar() {
       <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Playlists</div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {playlists.loading && <div className="px-3 py-2 text-xs text-ink-3">Loading…</div>}
-        {playlists.error && <div className="px-3 py-2 text-xs text-red-300">{playlists.error}</div>}
+        {playlists.error && (
+          <div className="px-3 py-2 text-xs text-red-300">
+            <div>{playlists.error}</div>
+            <button
+              className="mt-1.5 rounded-md bg-white/10 px-2 py-1 text-ink hover:bg-white/15"
+              onClick={playlists.reload}
+            >
+              Retry
+            </button>
+          </div>
+        )}
         {playlists.data?.length === 0 && <div className="px-3 py-2 text-xs text-ink-3">No playlists yet</div>}
         {playlists.data?.map((p) => (
           <NavItem key={p.id} view={{ name: 'playlist', id: p.id }} icon={<ListMusic size={15} />} label={p.name} />
