@@ -19,7 +19,11 @@ const artists = [
 const albums = [
   { id: 'al1', name: 'Northern Lights', artist: 'Aurora Fields', artistId: 'ar1', year: 2021, genre: 'Ambient', moods: ['calm', 'dreamy'], songCount: 3, duration: 36, coverArt: 'al1', created: '2024-01-01T00:00:00Z' },
   { id: 'al2', name: 'Meridian', artist: 'Aurora Fields', artistId: 'ar1', year: 2023, genre: 'Ambient', moods: ['calm'], songCount: 2, duration: 24, coverArt: 'al2', created: '2024-03-01T00:00:00Z' },
-  { id: 'al3', name: 'Signal Loss', artist: 'Blue Static', artistId: 'ar2', year: 2019, genre: 'Electronic', moods: ['energetic'], songCount: 2, duration: 24, coverArt: 'al3', created: '2024-02-01T00:00:00Z' }
+  { id: 'al3', name: 'Signal Loss', artist: 'Blue Static', artistId: 'ar2', year: 2019, genre: 'Electronic', moods: ['energetic'], songCount: 2, duration: 24, coverArt: 'al3', created: '2024-02-01T00:00:00Z' },
+  // A split two-disc soundtrack plus a single-disc one, so the Soundtracks view has both shapes.
+  { id: 'al4', name: 'Deep Field OST (Disc 1)', artist: 'Various Artists', year: 2020, genre: 'Soundtrack', moods: ['epic'], songCount: 2, duration: 24, coverArt: 'al4', created: '2024-04-01T00:00:00Z' },
+  { id: 'al5', name: 'Deep Field OST (Disc 2)', artist: 'Various Artists', year: 2020, genre: 'Soundtrack', moods: ['epic'], songCount: 2, duration: 24, coverArt: 'al5', created: '2024-04-02T00:00:00Z' },
+  { id: 'al6', name: 'Paper Town', artist: 'Mira Kato', year: 2022, genre: 'Original Score', moods: ['calm'], songCount: 2, duration: 24, coverArt: 'al6', created: '2024-05-01T00:00:00Z' }
 ]
 const songs = [
   { id: 's1', title: 'Dawn Chorus', albumId: 'al1', track: 1, freq: 220 },
@@ -28,7 +32,13 @@ const songs = [
   { id: 's4', title: 'Meridian I', albumId: 'al2', track: 1, freq: 392 },
   { id: 's5', title: 'Meridian II', albumId: 'al2', track: 2, freq: 440 },
   { id: 's6', title: 'Carrier', albumId: 'al3', track: 1, freq: 494 },
-  { id: 's7', title: 'Static Bloom', albumId: 'al3', track: 2, freq: 523 }
+  { id: 's7', title: 'Static Bloom', albumId: 'al3', track: 2, freq: 523 },
+  { id: 's8', title: 'Main Titles', albumId: 'al4', track: 1, freq: 262 },
+  { id: 's9', title: 'Drift', albumId: 'al4', track: 2, freq: 294 },
+  { id: 's10', title: 'Event Horizon', albumId: 'al5', track: 1, freq: 349 },
+  { id: 's11', title: 'End Credits', albumId: 'al5', track: 2, freq: 370 },
+  { id: 's12', title: 'Paper Town', albumId: 'al6', track: 1, freq: 415 },
+  { id: 's13', title: 'Last Bus', albumId: 'al6', track: 2, freq: 466 }
 ].map((s) => {
   const album = albums.find((a) => a.id === s.albumId)!
   return {

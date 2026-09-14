@@ -1,11 +1,14 @@
 import { Heart, ListMusic, MicVocal, PictureInPicture2, Repeat, Repeat1, Shuffle, Volume1, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import type { Track } from '@shared/types'
 import { formatTime } from '@shared/format'
 import { Cover } from '@renderer/shared/Cover'
 import { TransportControls } from '@renderer/shared/Controls'
 import { player, usePlayerState } from '@renderer/shared/playerStore'
 import { useClient, useSettings } from '@renderer/shared/sessionStore'
 import { nav, useNav } from './nav'
+import { useContextMenu } from './components/ContextMenu'
+import { TrackMenu } from './components/TrackList'
 
 export function NowPlayingBar() {
   const track = usePlayerState((s) => s.track)
@@ -15,17 +18,20 @@ export function NowPlayingBar() {
   const muted = usePlayerState((s) => s.muted)
   const repeat = usePlayerState((s) => s.repeat)
   const shuffle = usePlayerState((s) => s.shuffle)
+  const index = usePlayerState((s) => s.index)
   const showQueue = useNav((s) => s.showQueue)
   const showLyrics = useNav((s) => s.showLyrics)
   const settings = useSettings()
   const [scrub, setScrub] = useState<number | null>(null)
+  const menu = useContextMenu()
+  const star = useStar(track)
 
   const shown = scrub ?? position
   const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2
 
   return (
     <footer className="grid h-[88px] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-stroke bg-surface px-4">
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3" onContextMenu={(e) => track && menu.open(e)}>
         {track && (
           <>
             <Cover id={track.coverArt} size={120} className="h-14 w-14" />
@@ -46,6 +52,16 @@ export function NowPlayingBar() {
           </>
         )}
       </div>
+      {menu.pos && track && (
+        <TrackMenu
+          pos={menu.pos}
+          track={track}
+          starred={star.starred}
+          onClose={menu.close}
+          onPlay={() => player.playAt(index)}
+          onToggleStar={() => void star.toggle()}
+        />
+      )}
 
       <div className="flex w-[520px] flex-col items-center gap-1.5">
         <div className="flex items-center gap-2">
@@ -93,7 +109,7 @@ export function NowPlayingBar() {
       </div>
 
       <div className="flex items-center justify-end gap-1">
-        <FavoriteButton />
+        <FavoriteButton {...star} />
         <button
           className={`icon-btn h-8 w-8 ${showLyrics ? 'text-accent hover:text-accent' : ''}`}
           onClick={nav.toggleLyrics}
@@ -139,28 +155,43 @@ export function NowPlayingBar() {
 }
 
 /** Star/unstar the current track on the server. Optimistic, reverts if the call fails. */
-function FavoriteButton() {
-  const track = usePlayerState((s) => s.track)
+function useStar(track: Track | null): { starred: boolean; toggle: () => Promise<void>; disabled: boolean } {
   const client = useClient()
   const [starred, setStarred] = useState(false)
 
   useEffect(() => setStarred(Boolean(track?.starred)), [track?.id, track?.starred])
 
+  return {
+    starred,
+    disabled: !track || !client,
+    toggle: async () => {
+      if (!track || !client) return
+      const next = !starred
+      setStarred(next)
+      try {
+        await (next ? client.star(track.id) : client.unstar(track.id))
+      } catch {
+        setStarred(!next)
+      }
+    }
+  }
+}
+
+function FavoriteButton({
+  starred,
+  toggle,
+  disabled
+}: {
+  starred: boolean
+  toggle: () => Promise<void>
+  disabled: boolean
+}) {
   return (
     <button
       className={`icon-btn h-8 w-8 ${starred ? 'text-accent hover:text-accent' : ''}`}
-      disabled={!track || !client}
+      disabled={disabled}
       title={starred ? 'Remove from favorites' : 'Add to favorites'}
-      onClick={async () => {
-        if (!track || !client) return
-        const next = !starred
-        setStarred(next)
-        try {
-          await (next ? client.star(track.id) : client.unstar(track.id))
-        } catch {
-          setStarred(!next)
-        }
-      }}
+      onClick={() => void toggle()}
     >
       <Heart size={16} fill={starred ? 'currentColor' : 'none'} />
     </button>

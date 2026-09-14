@@ -7,6 +7,7 @@ import { QueuePanel } from './views/QueuePanel'
 import { LyricsView } from './views/LyricsView'
 import { Home } from './views/Home'
 import { Albums } from './views/Albums'
+import { Soundtracks } from './views/Soundtracks'
 import { Artists } from './views/Artists'
 import { Genres, GenreView } from './views/Genres'
 import { Moods, MoodView } from './views/Moods'
@@ -26,6 +27,8 @@ function Content() {
       return <Home />
     case 'albums':
       return <Albums />
+    case 'soundtracks':
+      return <Soundtracks />
     case 'artists':
       return <Artists />
     case 'genres':
@@ -41,7 +44,7 @@ function Content() {
     case 'artist':
       return <ArtistView id={view.id} />
     case 'album':
-      return <AlbumView id={view.id} />
+      return <AlbumView id={view.id} discIds={view.discIds} />
     case 'playlist':
       return <PlaylistView id={view.id} />
     case 'search':

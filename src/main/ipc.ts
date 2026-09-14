@@ -1,6 +1,7 @@
 import { app, ipcMain, shell, type IpcMainEvent } from 'electron'
 import {
   initialPlayerState,
+  pushRecent,
   type PlayerCommandName,
   type PlayerCommands,
   type PlayerEventName,
@@ -17,6 +18,7 @@ import {
   probeServers,
   type ServerProbe
 } from '@shared/subsonic/client'
+import { setAutoLaunch } from './autolaunch'
 import { clearSession, loadSession, saveSession } from './credentials'
 import { getSettings, updateSettings } from './store'
 import {
@@ -55,6 +57,10 @@ function applyEvent<K extends PlayerEventName>(event: K, payload: PlayerEvents[K
       playerState.index = p.index
       playerState.position = 0
       playerState.duration = p.track?.duration ?? 0
+      // Home's recent tiles: whatever actually plays, persisted in the user-data store.
+      const recents = getSettings().recents
+      const next = pushRecent(recents, p.track)
+      if (next !== recents) broadcast('settings:changed', [updateSettings({ recents: next })])
       break
     }
     case 'playStateChanged':
@@ -161,6 +167,10 @@ export function setupIpc(): void {
       }
       const client = new SubsonicClient(session)
       await client.ping() // throws SubsonicError on bad credentials / unreachable server
+      const previous = loadSession()
+      if (previous?.username !== session.username || previous.server !== session.server) {
+        broadcast('settings:changed', [updateSettings({ recents: [] })])
+      }
       saveSession(session)
       broadcast('auth:changed', [session])
       return session
@@ -194,6 +204,7 @@ export function setupIpc(): void {
 
   ipcMain.handle('auth:logout', () => {
     clearSession()
+    broadcast('settings:changed', [updateSettings({ recents: [] })])
     sendCommand('stop')
     broadcast('auth:changed', [null])
   })
@@ -212,7 +223,7 @@ export function setupIpc(): void {
       }
     }
     if (patch.autoLaunch !== undefined) {
-      app.setLoginItemSettings({ openAtLogin: patch.autoLaunch, args: ['--hidden'] })
+      setAutoLaunch(patch.autoLaunch)
     }
     broadcast('settings:changed', [next])
     return next

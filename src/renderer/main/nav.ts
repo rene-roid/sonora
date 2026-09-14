@@ -3,6 +3,7 @@ import { create } from 'zustand'
 export type View =
   | { name: 'home' }
   | { name: 'albums' }
+  | { name: 'soundtracks' }
   | { name: 'artists' }
   | { name: 'genres' }
   | { name: 'genre'; value: string }
@@ -10,7 +11,8 @@ export type View =
   | { name: 'mood'; value: string }
   | { name: 'mix'; value: string }
   | { name: 'artist'; id: string }
-  | { name: 'album'; id: string }
+  /** `discIds` are sibling albums holding the other discs of the same release, in disc order. */
+  | { name: 'album'; id: string; discIds?: string[] }
   | { name: 'playlist'; id: string }
   | { name: 'search'; query: string }
   | { name: 'favorites' }

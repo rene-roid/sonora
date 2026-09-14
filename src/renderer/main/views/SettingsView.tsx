@@ -258,7 +258,7 @@ export function SettingsView() {
           onChange={(v) => update({ mediaKeys: v })}
         />
         <Toggle
-          label="Start with Windows"
+          label="Start on system startup"
           description="Launch Sonora minimised to the tray when you sign in"
           checked={settings.autoLaunch}
           onChange={(v) => update({ autoLaunch: v })}

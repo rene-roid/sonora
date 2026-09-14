@@ -27,6 +27,7 @@ export function TrackList({
   showAlbum = true,
   showCover = true,
   numbered = false,
+  discs = false,
   onRemove,
   removeLabel = 'Remove'
 }: {
@@ -34,6 +35,8 @@ export function TrackList({
   showAlbum?: boolean
   showCover?: boolean
   numbered?: boolean
+  /** Insert a "Disc N" heading per disc. Ignored when the tracks all sit on one disc. */
+  discs?: boolean
   /** Given, the context menu offers a removal entry for the row at `index`. */
   onRemove?: (index: number) => void
   removeLabel?: string
@@ -60,6 +63,8 @@ export function TrackList({
 
   if (!tracks.length) return <div className="py-10 text-center text-sm text-ink-3">No tracks</div>
 
+  const multiDisc = discs && new Set(tracks.map((t) => t.disc ?? 1)).size > 1
+
   return (
     <div className="text-sm">
       <div className="grid grid-cols-[40px_1fr_auto] items-center gap-3 border-b border-stroke px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-ink-3 md:grid-cols-[40px_1fr_1fr_110px_60px]">
@@ -72,7 +77,8 @@ export function TrackList({
       {tracks.map((t, i) => {
         const isCurrent = t.id === currentId
         const fav = isStarred(t)
-        return (
+        const disc = t.disc ?? 1
+        const row = (
           <div
             key={`${t.id}-${i}`}
             onDoubleClick={() => player.setQueue(tracks, i, true)}
@@ -147,6 +153,15 @@ export function TrackList({
             <div className="text-right tabular-nums text-ink-2">{formatTime(t.duration)}</div>
           </div>
         )
+        if (!multiDisc || (i > 0 && (tracks[i - 1].disc ?? 1) === disc)) return row
+        return (
+          <div key={`disc-${disc}-${i}`}>
+            <div className={`flex items-center gap-2 px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-ink-3 ${i > 0 ? 'mt-5 border-t border-stroke pt-4' : 'pt-3'}`}>
+              <Disc3 size={13} /> Disc {disc}
+            </div>
+            {row}
+          </div>
+        )
       })}
       {menu.pos && tracks[menuIndex] && (
         <TrackMenu
@@ -164,7 +179,8 @@ export function TrackList({
   )
 }
 
-function TrackMenu({
+/** Row menu, also used by the now-playing bar. */
+export function TrackMenu({
   pos,
   track,
   starred,
@@ -172,7 +188,7 @@ function TrackMenu({
   onPlay,
   onToggleStar,
   onRemove,
-  removeLabel
+  removeLabel = 'Remove'
 }: {
   pos: { x: number; y: number }
   track: Track
@@ -181,7 +197,7 @@ function TrackMenu({
   onPlay: () => void
   onToggleStar: () => void
   onRemove?: () => void
-  removeLabel: string
+  removeLabel?: string
 }) {
   const client = useClient()
   const [picking, setPicking] = useState(false)

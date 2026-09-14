@@ -1,22 +1,25 @@
 import { Play } from 'lucide-react'
 import type { AlbumID3, ArtistID3 } from '@shared/subsonic/types'
+import { parseDiscName } from '@shared/format'
 import { Cover } from '@renderer/shared/Cover'
 import { player } from '@renderer/shared/playerStore'
 import { useClient } from '@renderer/shared/sessionStore'
 import { nav } from '../nav'
 
-export function AlbumCard({ album }: { album: AlbumID3 }) {
+/** `discIds` are sibling albums holding the rest of a split multi-disc release, in disc order. */
+export function AlbumCard({ album, discIds }: { album: AlbumID3; discIds?: string[] }) {
   const client = useClient()
+  const ids = [album.id, ...(discIds ?? [])]
   const playAlbum = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
     if (!client) return
-    const a = await client.getAlbum(album.id)
-    player.setQueue(a.song, 0, true)
+    const albums = await Promise.all(ids.map((i) => client.getAlbum(i)))
+    player.setQueue(albums.flatMap((a) => a.song), 0, true)
   }
   return (
     <div
       className="group cursor-pointer rounded-lg bg-white/[0.02] p-3 transition hover:bg-white/[0.07]"
-      onClick={() => nav.go({ name: 'album', id: album.id })}
+      onClick={() => nav.go({ name: 'album', id: album.id, discIds })}
     >
       <div className="relative">
         <Cover id={album.coverArt ?? album.id} size={300} className="aspect-square w-full shadow-lg" />
@@ -28,7 +31,9 @@ export function AlbumCard({ album }: { album: AlbumID3 }) {
           <Play size={20} fill="currentColor" className="ml-0.5" />
         </button>
       </div>
-      <div className="mt-3 truncate text-sm font-semibold">{album.name}</div>
+      <div className="mt-3 truncate text-sm font-semibold">
+        {ids.length > 1 ? parseDiscName(album.name).base : album.name}
+      </div>
       <div className="mt-0.5 truncate text-xs text-ink-2">
         {album.year ? `${album.year} · ` : ''}
         {album.artist ?? 'Unknown artist'}
