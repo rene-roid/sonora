@@ -33,6 +33,8 @@ export interface AlbumID3 {
   starred?: string
   year?: number
   genre?: string
+  /** OpenSubsonic multi-value mood tags. Absent on plain Subsonic servers. */
+  moods?: string[]
 }
 
 export interface Child {
@@ -58,6 +60,7 @@ export interface Child {
   type?: string
   starred?: string
   playCount?: number
+  moods?: string[]
 }
 
 export interface Playlist {

@@ -6,6 +6,8 @@ export type View =
   | { name: 'artists' }
   | { name: 'genres' }
   | { name: 'genre'; value: string }
+  | { name: 'moods' }
+  | { name: 'mood'; value: string }
   | { name: 'artist'; id: string }
   | { name: 'album'; id: string }
   | { name: 'playlist'; id: string }

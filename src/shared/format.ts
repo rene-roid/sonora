@@ -19,3 +19,10 @@ export function formatDuration(seconds: number): string {
 export function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n))
 }
+
+/** Case-insensitive substring match over the fields a listener would type: title, artist, album. */
+export function filterTracks<T extends { title: string; artist: string; album: string }>(tracks: T[], query: string): T[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return tracks
+  return tracks.filter((t) => `${t.title} ${t.artist} ${t.album}`.toLowerCase().includes(q))
+}

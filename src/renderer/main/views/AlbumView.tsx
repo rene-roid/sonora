@@ -1,16 +1,19 @@
+import { useMemo, useState } from 'react'
 import { ListPlus, Play, Shuffle } from 'lucide-react'
-import { formatDuration } from '@shared/format'
+import { filterTracks, formatDuration } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
 import { Cover } from '@renderer/shared/Cover'
 import { TrackList } from '../components/TrackList'
-import { ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton } from '../components/ui'
+import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
 import { useAsync } from '../useAsync'
 import { nav } from '../nav'
 
 export function AlbumView({ id }: { id: string }) {
   const client = useClient()
   const state = useAsync(`album:${id}`, () => client?.getAlbum(id), [client, id])
+  const [query, setQuery] = useState('')
+  const shown = useMemo(() => filterTracks(state.data?.song ?? [], query), [state.data, query])
 
   if (state.loading) return <Loading />
   if (state.error) return <ErrorBox message={state.error} onRetry={state.reload} />
@@ -57,7 +60,12 @@ export function AlbumView({ id }: { id: string }) {
           </>
         }
       />
-      <TrackList tracks={songs} showAlbum={false} showCover={false} numbered />
+      <SearchInput value={query} onChange={setQuery} placeholder="Search in this album" />
+      {shown.length === 0 ? (
+        <Empty>No songs match</Empty>
+      ) : (
+        <TrackList tracks={shown} showAlbum={false} showCover={false} numbered />
+      )}
     </div>
   )
 }
