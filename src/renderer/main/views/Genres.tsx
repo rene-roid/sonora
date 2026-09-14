@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Play, Shuffle } from 'lucide-react'
 import type { Genre } from '@shared/subsonic/types'
-import { filterTracks, formatDuration } from '@shared/format'
+import { capitalize, filterTracks, formatDuration } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
 import { TrackList } from '../components/TrackList'
@@ -20,7 +20,7 @@ function GenreCard({ genre }: { genre: Genre }) {
   }
   return (
     <TagCard
-      name={genre.value}
+      name={capitalize(genre.value)}
       subtitle={`${genre.songCount ?? 0} song${genre.songCount === 1 ? '' : 's'}`}
       onClick={() => nav.go({ name: 'genre', value: genre.value })}
       action={
@@ -62,7 +62,7 @@ export function Genres() {
 export function GenreView({ value }: { value: string }) {
   const client = useClient()
   const state = useAsync(`genre:${value}`, () => client?.getSongsByGenre(value), [client, value])
-  useRecent({ key: `genre:${value}`, view: { name: 'genre', value }, title: value })
+  useRecent({ key: `genre:${value}`, view: { name: 'genre', value }, title: capitalize(value) })
   const [query, setQuery] = useState('')
   const songs = state.data
   const shown = useMemo(() => filterTracks(songs ?? [], query), [songs, query])
@@ -76,7 +76,7 @@ export function GenreView({ value }: { value: string }) {
     <div>
       <PageTitle
         eyebrow="Genre"
-        title={value}
+        title={capitalize(value)}
         subtitle={`${songs.length} song${songs.length === 1 ? '' : 's'}, ${formatDuration(total)}`}
         actions={
           <>

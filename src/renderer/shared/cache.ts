@@ -18,6 +18,7 @@ function clear(): void {
 export function setCacheScope(scope: string): void {
   if (localStorage.getItem(SCOPE_KEY) === scope) return
   clear()
+  localStorage.removeItem('sonora.recents') // play history belongs to the account too
   localStorage.setItem(SCOPE_KEY, scope)
 }
 

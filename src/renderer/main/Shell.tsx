@@ -7,6 +7,7 @@ import { QueuePanel } from './views/QueuePanel'
 import { LyricsView } from './views/LyricsView'
 import { Home } from './views/Home'
 import { Albums } from './views/Albums'
+import { Soundtracks } from './views/Soundtracks'
 import { Artists } from './views/Artists'
 import { Genres, GenreView } from './views/Genres'
 import { Moods, MoodView } from './views/Moods'
@@ -16,7 +17,8 @@ import { PlaylistView } from './views/PlaylistView'
 import { SearchView } from './views/SearchView'
 import { Favorites } from './views/Favorites'
 import { SettingsView } from './views/SettingsView'
-import { player, usePlayerStore } from '@renderer/shared/playerStore'
+import { player, usePlayerState, usePlayerStore } from '@renderer/shared/playerStore'
+import { recordPlayed } from './recents'
 
 function Content() {
   const view = useNav((s) => s.view)
@@ -25,6 +27,8 @@ function Content() {
       return <Home />
     case 'albums':
       return <Albums />
+    case 'soundtracks':
+      return <Soundtracks />
     case 'artists':
       return <Artists />
     case 'genres':
@@ -38,7 +42,7 @@ function Content() {
     case 'artist':
       return <ArtistView id={view.id} />
     case 'album':
-      return <AlbumView id={view.id} />
+      return <AlbumView id={view.id} discIds={view.discIds} />
     case 'playlist':
       return <PlaylistView id={view.id} />
     case 'search':
@@ -54,6 +58,12 @@ export function Shell() {
   const showQueue = useNav((s) => s.showQueue)
   const showLyrics = useNav((s) => s.showLyrics)
   const view = useNav((s) => s.view)
+
+  // Home's recent tiles come from what actually played.
+  const track = usePlayerState((s) => s.track)
+  useEffect(() => {
+    recordPlayed(track)
+  }, [track?.id])
 
   // Space toggles playback unless typing in an input.
   useEffect(() => {

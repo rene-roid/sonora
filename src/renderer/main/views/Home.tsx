@@ -1,11 +1,12 @@
-import { Heart, Shuffle } from 'lucide-react'
+import { useState } from 'react'
+import { Heart, Play, Shuffle } from 'lucide-react'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
 import { Cover } from '@renderer/shared/Cover'
 import { AlbumCard, CardGrid, hue } from '../components/AlbumCard'
-import { ErrorBox, Loading, PrimaryButton, SectionHeader } from '../components/ui'
+import { ErrorBox, Loading, PrimaryButton, SectionHeader, Spinner } from '../components/ui'
 import { nav, type View } from '../nav'
-import { useRecents } from '../recents'
+import { tracksFor, useRecents } from '../recents'
 import { useAsync } from '../useAsync'
 import type { AlbumListType } from '@shared/subsonic/types'
 
@@ -26,14 +27,36 @@ function AlbumRow({ title, type }: { title: string; type: AlbumListType }) {
 }
 
 function RecentTile({ title, view, art }: { title: string; view: View; art: React.ReactNode }) {
+  const client = useClient()
+  const [busy, setBusy] = useState(false)
+  const play = async (e: React.MouseEvent): Promise<void> => {
+    e.stopPropagation()
+    if (!client || busy) return
+    setBusy(true)
+    try {
+      const tracks = await tracksFor(client, view)
+      if (tracks.length) player.setQueue(tracks, 0, true)
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
-    <button
-      onClick={() => nav.go(view)}
-      className="flex h-16 items-center gap-3 overflow-hidden rounded-md bg-white/[0.07] text-left transition hover:bg-white/[0.14]"
-    >
-      <div className="h-16 w-16 shrink-0">{art}</div>
-      <div className="line-clamp-2 min-w-0 flex-1 pr-3 text-sm font-semibold leading-tight">{title}</div>
-    </button>
+    <div className="group relative">
+      <button
+        onClick={() => nav.go(view)}
+        className="flex h-16 w-full items-center gap-3 overflow-hidden rounded-md bg-white/[0.07] text-left transition hover:bg-white/[0.14]"
+      >
+        <div className="h-16 w-16 shrink-0">{art}</div>
+        <div className="line-clamp-2 min-w-0 flex-1 pr-14 text-sm font-semibold leading-tight">{title}</div>
+      </button>
+      <button
+        onClick={play}
+        title={`Play ${title}`}
+        className="absolute top-1/2 right-3 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-accent text-black opacity-0 shadow-xl transition group-hover:opacity-100 hover:scale-105 focus-visible:opacity-100"
+      >
+        {busy ? <Spinner className="h-5 w-5" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+      </button>
+    </div>
   )
 }
 

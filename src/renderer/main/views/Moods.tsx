@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { AlbumID3 } from '@shared/subsonic/types'
+import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { AlbumCard, CardGrid, TagCard } from '../components/AlbumCard'
 import { Empty, ErrorBox, Loading, PageTitle, SearchInput } from '../components/ui'
@@ -44,7 +45,7 @@ export function Moods() {
         {moods.map(([mood, count]) => (
           <TagCard
             key={mood}
-            name={mood}
+            name={capitalize(mood)}
             subtitle={`${count} album${count === 1 ? '' : 's'}`}
             onClick={() => nav.go({ name: 'mood', value: mood })}
           />
@@ -56,7 +57,7 @@ export function Moods() {
 
 export function MoodView({ value }: { value: string }) {
   const state = useAlbums()
-  useRecent({ key: `mood:${value}`, view: { name: 'mood', value }, title: value })
+  useRecent({ key: `mood:${value}`, view: { name: 'mood', value }, title: capitalize(value) })
   const [query, setQuery] = useState('')
 
   const albums = useMemo(() => (state.data ?? []).filter((a) => a.moods?.includes(value)), [state.data, value])
@@ -73,7 +74,7 @@ export function MoodView({ value }: { value: string }) {
     <div>
       <PageTitle
         eyebrow="Mood"
-        title={value}
+        title={capitalize(value)}
         subtitle={`${albums.length} album${albums.length === 1 ? '' : 's'}`}
       />
       <SearchInput value={query} onChange={setQuery} placeholder="Search in this mood" />

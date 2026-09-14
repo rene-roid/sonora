@@ -17,6 +17,7 @@ import {
   probeServers,
   type ServerProbe
 } from '@shared/subsonic/client'
+import { setAutoLaunch } from './autolaunch'
 import { clearSession, loadSession, saveSession } from './credentials'
 import { getSettings, updateSettings } from './store'
 import {
@@ -212,7 +213,7 @@ export function setupIpc(): void {
       }
     }
     if (patch.autoLaunch !== undefined) {
-      app.setLoginItemSettings({ openAtLogin: patch.autoLaunch, args: ['--hidden'] })
+      setAutoLaunch(patch.autoLaunch)
     }
     broadcast('settings:changed', [next])
     return next
