@@ -57,7 +57,7 @@ export function CardGrid({ children }: { children: React.ReactNode }) {
 }
 
 /** Tags (genres, moods) have no artwork on Navidrome, so give each a stable colour from its name. */
-function hue(name: string): number {
+export function hue(name: string): number {
   let h = 0
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360
   return h
