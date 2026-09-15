@@ -69,14 +69,17 @@ export function PageTitle({
 export function PrimaryButton({
   children,
   onClick,
+  type = 'button',
   disabled
 }: {
   children: ReactNode
   onClick?: () => void
+  type?: 'button' | 'submit'
   disabled?: boolean
 }) {
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-black transition hover:brightness-110 active:brightness-95 disabled:opacity-40"
@@ -91,16 +94,19 @@ export function GhostButton({
   onClick,
   disabled,
   active,
-  title
+  title,
+  type = 'button'
 }: {
   children: ReactNode
   onClick?: () => void
   disabled?: boolean
   active?: boolean
   title?: string
+  type?: 'button' | 'submit'
 }) {
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
       title={title}

@@ -97,6 +97,7 @@ Three more windows, all driven by the same hidden audio host:
 - 🔔 **Fluent Toasts.** A frameless, click-through, always-on-top card that animates in on every track change
 - 🪟 **Mini-player.** Draggable always-on-top player that remembers where you put it
 - 📊 **Taskbar Widget.** Acrylic flyout pinned above the taskbar with a canvas visualiser fed by a Web Audio `AnalyserNode` at ~30fps
+- 📝 **Playlists.** Create one from the sidebar, from a track's context menu or from the whole queue, and add or remove songs from any row
 - ❤️ **Favorites.** Star anything from a track row or the now-playing bar; starred tracks collect into their own view
 - ⏯ **Resume on Launch.** Playback state is persisted on quit and restored where you left off
 - 🔐 **Encrypted Credentials.** Only the derived Subsonic token is stored, encrypted with Electron's `safeStorage`; the plain password is never persisted

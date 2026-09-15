@@ -1,8 +1,9 @@
-import { Disc3, Film, Heart, Home, ListMusic, Mic2, Settings, Smile, Tags } from 'lucide-react'
+import { Disc3, Film, Heart, Home, ListMusic, Mic2, Plus, Settings, Smile, Tags } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import type { SubsonicClient } from '@shared/subsonic/client'
 import { useClient, useSessionStore } from '@renderer/shared/sessionStore'
 import { nav, useNav, type View } from './nav'
+import { playlists, usePlaylistsRevision } from './playlists'
 import { useAsync } from './useAsync'
 
 /** How often the server is pinged to refresh the connectivity dot. */
@@ -79,7 +80,8 @@ function NavItem({ view, icon, before, label }: { view: View; icon: ReactNode; b
 export function Sidebar() {
   const client = useClient()
   const session = useSessionStore((s) => s.session)
-  const playlists = useAsync('playlists', () => client?.getPlaylists(), [client])
+  const revision = usePlaylistsRevision()
+  const list = useAsync('playlists', () => client?.getPlaylists(), [client, revision])
   const online = useServerStatus(client)
 
   return (
@@ -94,22 +96,32 @@ export function Sidebar() {
         <NavItem view={{ name: 'favorites' }} icon={<Heart size={16} />} label="Favorites" />
       </nav>
       <div className="mx-4 my-1 border-t border-stroke" />
-      <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-3">Playlists</div>
+      <div className="flex items-center justify-between px-4 pt-2 pb-1">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-3">Playlists</span>
+        <button
+          className="icon-btn h-6 w-6"
+          title="New playlist"
+          disabled={!client}
+          onClick={() => playlists.newPlaylist()}
+        >
+          <Plus size={15} />
+        </button>
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-        {playlists.loading && <div className="px-3 py-2 text-xs text-ink-3">Loading…</div>}
-        {playlists.error && (
+        {list.loading && <div className="px-3 py-2 text-xs text-ink-3">Loading…</div>}
+        {list.error && (
           <div className="px-3 py-2 text-xs text-red-300">
-            <div>{playlists.error}</div>
+            <div>{list.error}</div>
             <button
               className="mt-1.5 rounded-md bg-white/10 px-2 py-1 text-ink hover:bg-white/15"
-              onClick={playlists.reload}
+              onClick={list.reload}
             >
               Retry
             </button>
           </div>
         )}
-        {playlists.data?.length === 0 && <div className="px-3 py-2 text-xs text-ink-3">No playlists yet</div>}
-        {playlists.data?.map((p) => (
+        {list.data?.length === 0 && <div className="px-3 py-2 text-xs text-ink-3">No playlists yet</div>}
+        {list.data?.map((p) => (
           <NavItem key={p.id} view={{ name: 'playlist', id: p.id }} icon={<ListMusic size={15} />} label={p.name} />
         ))}
       </div>

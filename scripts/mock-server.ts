@@ -62,7 +62,9 @@ const songs = [
     freq: s.freq
   }
 })
-const playlists = [{ id: 'pl1', name: 'Focus', owner: 'admin', public: true, songCount: 3, duration: 36, entry: ['s1', 's4', 's6'] }]
+const playlists = [
+  { id: 'pl1', name: 'Focus', owner: 'admin', public: true, songCount: 3, duration: 36, created: '2024-06-01T00:00:00Z', entry: ['s1', 's4', 's6'] }
+]
 
 // ---- audio: 12s WAV with a gentle pulse so the visualiser has something to show -------------
 
@@ -237,6 +239,33 @@ Bun.serve({
           const p = playlists.find((x) => x.id === q.get('id'))
           if (!p) return fail(70, 'Playlist not found')
           return ok({ playlist: { ...p, entry: p.entry.map((id) => strip(song(id)!)) } })
+        }
+        case 'createPlaylist': {
+          const name = q.get('name') ?? 'Untitled'
+          const entry = q.getAll('songId').filter((id) => song(id))
+          const pl = {
+            id: `pl${playlists.length + 1}`,
+            name,
+            owner: 'admin',
+            public: false,
+            songCount: entry.length,
+            duration: entry.reduce((t, id) => t + (song(id)?.duration ?? 12), 0),
+            created: new Date().toISOString(),
+            entry
+          }
+          playlists.push(pl)
+          const { entry: _e, ...rest } = pl
+          return ok({ playlist: rest })
+        }
+        case 'updatePlaylist': {
+          const pl = playlists.find((x) => x.id === q.get('playlistId'))
+          if (!pl) return fail(70, 'Playlist not found')
+          const drop = new Set(q.getAll('songIndexToRemove').map(Number))
+          pl.entry = pl.entry.filter((_e, i) => !drop.has(i))
+          pl.entry.push(...q.getAll('songIdToAdd').filter((id) => song(id)))
+          if (q.get('name')) pl.name = q.get('name')!
+          pl.songCount = pl.entry.length
+          return ok()
         }
         case 'scrobble':
         case 'star':

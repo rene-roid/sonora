@@ -82,3 +82,43 @@ describe('updatePlaylist', () => {
     expect(new URL(url).searchParams.getAll('songIndexToRemove')).toEqual(['0'])
   })
 })
+
+describe('createPlaylist', () => {
+  const ok = (body: object): Response => new Response(JSON.stringify({ 'subsonic-response': { status: 'ok', ...body } }))
+
+  test('sends the seed songs and returns the id the server reports', async () => {
+    let url = ''
+    const client = new SubsonicClient(session, async (u) => {
+      url = u
+      return ok({ playlist: { id: 'pl9', name: 'Road trip' } })
+    })
+    expect(await client.createPlaylist('Road trip', ['a', 'b'])).toBe('pl9')
+    const p = new URL(url).searchParams
+    expect(p.get('name')).toBe('Road trip')
+    expect(p.getAll('songId')).toEqual(['a', 'b'])
+  })
+
+  test('a server that answers with a bare ok is resolved by name, newest first', async () => {
+    const client = new SubsonicClient(session, async (u) =>
+      u.includes('getPlaylists')
+        ? ok({
+            playlists: {
+              playlist: [
+                { id: 'old', name: 'Road trip', created: '2024-01-01T00:00:00Z' },
+                { id: 'new', name: 'Road trip', created: '2026-01-01T00:00:00Z' },
+                { id: 'other', name: 'Chill', created: '2026-06-01T00:00:00Z' }
+              ]
+            }
+          })
+        : ok({})
+    )
+    expect(await client.createPlaylist('Road trip')).toBe('new')
+  })
+
+  test('throws when the server neither reports nor lists the new playlist', async () => {
+    const client = new SubsonicClient(session, async (u) =>
+      u.includes('getPlaylists') ? ok({ playlists: {} }) : ok({})
+    )
+    expect(client.createPlaylist('Road trip')).rejects.toThrow('Road trip')
+  })
+})
