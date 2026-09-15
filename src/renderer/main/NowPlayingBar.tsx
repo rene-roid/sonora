@@ -29,8 +29,18 @@ export function NowPlayingBar() {
   const shown = scrub ?? position
   const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2
 
+  const handleVolumeWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    const next = Math.min(1, Math.max(0, (muted ? 0 : volume) - Math.sign(e.deltaY) * 0.05))
+    if (muted) player.setMuted(false)
+    player.setVolume(next)
+  }
+
   return (
-    <footer className="grid h-[88px] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-stroke bg-surface px-4">
+    <footer
+      className="grid h-[88px] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-stroke bg-surface px-4"
+      onWheel={handleVolumeWheel}
+    >
       <div className="flex min-w-0 items-center gap-3" onContextMenu={(e) => track && menu.open(e)}>
         {track && (
           <>

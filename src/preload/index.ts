@@ -1,4 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { release } from 'node:os'
+import { supportsNativeAcrylic } from '@shared/types'
 import type {
   PlayerCommandName,
   PlayerCommands,
@@ -7,6 +9,7 @@ import type {
   PlayerState,
   Session,
   Settings,
+  SettingsPatch,
   Track,
   WindowName
 } from '@shared/types'
@@ -27,6 +30,8 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): Unsubscribe {
 
 const api = {
   windowName,
+  /** Windows 11 22H2+; decides whether the widget's acrylic mode gets a real system backdrop. */
+  nativeAcrylic: supportsNativeAcrylic(process.platform, release()),
 
   player: {
     on<K extends PlayerEventName>(event: K, cb: (payload: PlayerEvents[K]) => void): Unsubscribe {
@@ -91,7 +96,7 @@ const api = {
     get(): Promise<Settings> {
       return ipcRenderer.invoke('settings:get')
     },
-    update(patch: Partial<Settings>): Promise<Settings> {
+    update(patch: SettingsPatch): Promise<Settings> {
       return ipcRenderer.invoke('settings:update', patch)
     },
     onChange(cb: (settings: Settings) => void): Unsubscribe {
@@ -121,11 +126,24 @@ const api = {
     setIgnoreMouse: (ignore: boolean): void => ipcRenderer.send('window:setIgnoreMouse', ignore)
   },
 
+  /** Floating windows only. Main watches the cursor and reports it to the window's page. */
+  overlay: {
+    onHover(cb: (hovering: boolean) => void): Unsubscribe {
+      return subscribe('overlay:hover', cb)
+    },
+    /** Cursor in window coordinates while click-through is on, or null once it leaves. */
+    onHitTest(cb: (point: { x: number; y: number } | null) => void): Unsubscribe {
+      return subscribe('overlay:hitTest', cb)
+    }
+  },
+
   toast: {
     onShow(cb: (payload: { track: Track; durationMs: number }) => void): Unsubscribe {
       return subscribe('toast:show', cb)
     },
     shown: (): void => ipcRenderer.send('window:control', 'toastShown'),
+    /** The card has started its exit; an acrylic toast fades its window out alongside it. */
+    leaving: (): void => ipcRenderer.send('window:control', 'toastLeaving'),
     done: (): void => ipcRenderer.send('window:control', 'toastDone')
   },
 

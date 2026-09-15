@@ -7,7 +7,8 @@ import {
   type PlayerEvents,
   type PlayerState,
   type Session,
-  type Settings
+  type Settings,
+  type SettingsPatch
 } from '@shared/types'
 import {
   SubsonicClient,
@@ -22,11 +23,15 @@ import { setAutoLaunch } from './autolaunch'
 import { clearSession, loadSession, saveSession } from './credentials'
 import { getSettings, updateSettings } from './store'
 import {
+  applyOverlaySettings,
   broadcast,
+  fadeToastOut,
   getWindow,
   positionToast,
+  positionWidget,
   setWidgetEnabled,
   showMainWindow,
+  showToast,
   windowNameOf
 } from './windows'
 
@@ -207,7 +212,7 @@ export function setupIpc(): void {
 
   // ---- settings ------------------------------------------------------------
   ipcMain.handle('settings:get', (): Settings => getSettings())
-  ipcMain.handle('settings:update', (_e, patch: Partial<Settings>): Settings => {
+  ipcMain.handle('settings:update', (_e, patch: SettingsPatch): Settings => {
     const before = getSettings()
     const next = updateSettings(patch)
     if (patch.widgets) {
@@ -217,6 +222,18 @@ export function setupIpc(): void {
       if (patch.widgets.taskbar !== undefined && patch.widgets.taskbar !== before.widgets.taskbar) {
         setWidgetEnabled('widget', patch.widgets.taskbar)
       }
+    }
+    // The anchor and the layout options both change where the widget window belongs, and the
+    // background mode decides which kind of window it has to be in the first place.
+    if (patch.widget) {
+      applyOverlaySettings('widget')
+      positionWidget()
+      positionToast()
+    }
+    if (patch.mini) applyOverlaySettings('mini')
+    if (patch.toast) {
+      applyOverlaySettings('toast')
+      positionToast()
     }
     if (patch.autoLaunch !== undefined) {
       setAutoLaunch(patch.autoLaunch)
@@ -241,7 +258,7 @@ export function setupIpc(): void {
   ipcMain.handle('cache:clear', () => audioCache.clear())
 
   // ---- windows -------------------------------------------------------------
-  ipcMain.on('window:control', (e, action: 'minimize' | 'maximize' | 'close' | 'hide' | 'showMain' | 'toastShown' | 'toastDone') => {
+  ipcMain.on('window:control', (e, action: 'minimize' | 'maximize' | 'close' | 'hide' | 'showMain' | 'toastShown' | 'toastLeaving' | 'toastDone') => {
     const name = windowNameOf(e.sender.id)
     const win = name ? getWindow(name) : undefined
     switch (action) {
@@ -261,14 +278,15 @@ export function setupIpc(): void {
       case 'showMain':
         showMainWindow()
         break
+      case 'toastShown':
+        showToast()
+        break
+      case 'toastLeaving':
+        fadeToastOut()
+        break
       case 'toastDone':
         getWindow('toast')?.hide()
         break
-      case 'toastShown': {
-        positionToast()
-        getWindow('toast')?.showInactive()
-        break
-      }
     }
   })
 
@@ -277,6 +295,7 @@ export function setupIpc(): void {
     const win = name ? getWindow(name) : undefined
     win?.setIgnoreMouseEvents(ignore, { forward: true })
   })
+
 
   ipcMain.handle('app:info', () => ({ version: app.getVersion(), platform: process.platform }))
   ipcMain.on('app:openExternal', (_e, url: string) => {

@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import type { NormalizeMode, Session, Settings } from '@shared/types'
+import type {
+  MiniOptions,
+  NormalizeMode,
+  OverlayAnchor,
+  OverlayBackground,
+  OverlayChrome,
+  Session,
+  Settings,
+  SettingsPatch,
+  ToastOptions,
+  WidgetOptions
+} from '@shared/types'
+import { OVERLAY_ANCHORS, OVERLAY_BACKGROUNDS } from '@shared/types'
 import type { ServerProbe } from '@shared/subsonic/client'
 import { useSessionStore, useSettings } from '@renderer/shared/sessionStore'
 import { GhostButton, PageTitle, SectionHeader, Spinner } from '../components/ui'
@@ -145,6 +157,255 @@ function Toggle({
   )
 }
 
+/**
+ * The work area as a 3x2 grid of slots, each drawn as the little bar the window will become.
+ * Reads faster than a dropdown, since the choice is about a place on screen.
+ */
+function AnchorPicker({ value, onChange }: { value: OverlayAnchor; onChange: (v: OverlayAnchor) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-6 rounded-md px-3 py-3">
+      <div>
+        <div className="text-sm font-medium">Position</div>
+        <div className="text-xs text-ink-2">
+          {OVERLAY_ANCHORS.find((a) => a.value === value)?.label} of the screen, clear of the taskbar.
+        </div>
+      </div>
+      <div className="grid h-[76px] w-[132px] shrink-0 grid-cols-3 grid-rows-2 gap-1 rounded-md border border-white/10 bg-black/40 p-1">
+        {OVERLAY_ANCHORS.map((a) => {
+          const active = a.value === value
+          return (
+            <button
+              key={a.value}
+              title={a.label}
+              aria-label={a.label}
+              aria-pressed={active}
+              onClick={() => onChange(a.value)}
+              className={`flex items-center justify-center rounded-sm transition ${
+                active ? 'bg-accent/20' : 'hover:bg-white/10'
+              }`}
+            >
+              <span className={`h-1.5 w-7 rounded-full ${active ? 'bg-accent' : 'bg-white/25'}`} />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Card fill: an opaque panel, or the system's frosted glass. */
+function BackgroundPicker({ value, onChange }: { value: OverlayBackground; onChange: (v: OverlayBackground) => void }) {
+  const chosen = OVERLAY_BACKGROUNDS.find((b) => b.value === value)
+  const degraded = value === 'acrylic' && !window.sonora.nativeAcrylic
+  return (
+    <div className="flex items-center justify-between gap-6 rounded-md px-3 py-3">
+      <div>
+        <div className="text-sm font-medium">Background</div>
+        <div className="text-xs text-ink-2">
+          {degraded ? 'Windows 11 blurs what is behind the window; here it falls back to a plain translucent card' : chosen?.hint}
+        </div>
+      </div>
+      <div className="flex shrink-0 rounded-md border border-white/10 p-0.5">
+        {OVERLAY_BACKGROUNDS.map((b) => (
+          <button
+            key={b.value}
+            aria-pressed={b.value === value}
+            onClick={() => onChange(b.value)}
+            className={`rounded px-2.5 py-1 text-xs transition ${
+              b.value === value ? 'bg-accent font-semibold text-black' : 'text-ink-2 hover:text-ink'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function OpacitySlider({
+  label,
+  description,
+  min,
+  value,
+  onChange
+}: {
+  label: string
+  description: string
+  min: number
+  value: number
+  onChange: (v: number) => void
+}) {
+  const pct = Math.round(value * 100)
+  return (
+    <label className="flex items-center justify-between gap-6 px-3 py-3">
+      <div>
+        <div className="text-sm font-medium">{label}</div>
+        <div className="text-xs text-ink-2">{description}</div>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        <input
+          type="range"
+          className="range w-40"
+          min={min}
+          max={100}
+          step={5}
+          value={pct}
+          onChange={(e) => onChange(Number(e.target.value) / 100)}
+        />
+        <span className="w-9 shrink-0 text-right text-xs tabular-nums text-ink-3">{pct}%</span>
+      </div>
+    </label>
+  )
+}
+
+/** Everything about the taskbar widget except whether it is shown at all. */
+function TaskbarWidgetSettings({ value, onChange }: { value: WidgetOptions; onChange: (p: Partial<WidgetOptions>) => void }) {
+  return (
+    <section className="mb-8">
+      <SectionHeader title="Taskbar widget" />
+      <AnchorPicker value={value.anchor} onChange={(anchor) => onChange({ anchor })} />
+      <Toggle
+        label="Compact view"
+        description="A shorter bar with just the title, for when it should stay out of the way"
+        checked={value.compact}
+        onChange={(compact) => onChange({ compact })}
+      />
+      <Toggle
+        label="Audio visualiser"
+        description="Live frequency bars behind the track details"
+        checked={value.visualizer}
+        onChange={(visualizer) => onChange({ visualizer })}
+      />
+      <Toggle
+        label="Album art"
+        description="Cover thumbnail on the left; click it to open Sonora"
+        checked={value.cover}
+        onChange={(cover) => onChange({ cover })}
+      />
+      <Toggle
+        label="Progress bar"
+        description="Thin line along the bottom edge showing how far into the track you are"
+        checked={value.progress}
+        onChange={(progress) => onChange({ progress })}
+      />
+      <Toggle
+        label="Elapsed time"
+        description="Show the position and length next to the controls"
+        checked={value.elapsed}
+        onChange={(elapsed) => onChange({ elapsed })}
+      />
+      <ChromeSettings
+        value={value}
+        onChange={onChange}
+        clickThroughHint="Clicks pass to whatever is behind the widget; its own buttons still work"
+      />
+    </section>
+  )
+}
+
+/**
+ * The look shared by every floating window. `clickThroughHint` doubles as the switch for the
+ * hover and click-through rows: the toast never takes the mouse, so it passes none and gets
+ * only the background and opacity.
+ */
+function ChromeSettings({
+  value,
+  onChange,
+  clickThroughHint
+}: {
+  value: Pick<OverlayChrome, 'background' | 'opacity'> & Partial<OverlayChrome>
+  onChange: (p: Partial<OverlayChrome>) => void
+  clickThroughHint?: string
+}) {
+  const interactive = clickThroughHint !== undefined
+  return (
+    <>
+      <BackgroundPicker value={value.background} onChange={(background) => onChange({ background })} />
+      <OpacitySlider
+        label="Opacity"
+        description={value.fadeOnHover ? 'How solid it is when the pointer is away' : 'How solid it is'}
+        min={35}
+        value={value.opacity}
+        onChange={(opacity) => onChange({ opacity })}
+      />
+      {interactive && (
+        <>
+          <Toggle
+            label="Fade when hovered"
+            description="Drop it further out of the way while the pointer is over it"
+            checked={value.fadeOnHover ?? false}
+            onChange={(fadeOnHover) => onChange({ fadeOnHover })}
+          />
+          {value.fadeOnHover && (
+            <OpacitySlider
+              label="Faded opacity"
+              description="Where it settles while hovered. Never brighter than the opacity above."
+              min={5}
+              value={value.hoverOpacity ?? 0.35}
+              onChange={(hoverOpacity) => onChange({ hoverOpacity })}
+            />
+          )}
+          <Toggle
+            label="Click through"
+            description={clickThroughHint}
+            checked={value.clickThrough ?? false}
+            onChange={(clickThrough) => onChange({ clickThrough })}
+          />
+        </>
+      )}
+    </>
+  )
+}
+
+function MiniPlayerSettings({ value, onChange }: { value: MiniOptions; onChange: (p: Partial<MiniOptions>) => void }) {
+  return (
+    <section className="mb-8">
+      <SectionHeader title="Mini player" />
+      <ChromeSettings
+        value={value}
+        onChange={onChange}
+        clickThroughHint="Clicks pass to whatever is behind it; the controls still work, but it cannot be dragged until this is off"
+      />
+    </section>
+  )
+}
+
+function ToastSettings({
+  value,
+  durationMs,
+  onChange,
+  onDuration
+}: {
+  value: ToastOptions
+  durationMs: number
+  onChange: (p: Partial<ToastOptions>) => void
+  onDuration: (ms: number) => void
+}) {
+  return (
+    <section className="mb-8">
+      <SectionHeader title="Track change toasts" />
+      <AnchorPicker value={value.anchor} onChange={(anchor) => onChange({ anchor })} />
+      <ChromeSettings value={value} onChange={onChange} />
+      <label className="flex items-center justify-between gap-6 px-3 py-3">
+        <div>
+          <div className="text-sm font-medium">Duration</div>
+          <div className="text-xs text-ink-2">{(durationMs / 1000).toFixed(1)} seconds on screen</div>
+        </div>
+        <input
+          type="range"
+          className="range w-40"
+          min={1500}
+          max={8000}
+          step={250}
+          value={durationMs}
+          onChange={(e) => onDuration(Number(e.target.value))}
+        />
+      </label>
+    </section>
+  )
+}
+
 const NORMALIZE_MODES: { value: NormalizeMode; label: string }[] = [
   { value: 'off', label: 'Off' },
   { value: 'album', label: 'Per album' },
@@ -235,7 +496,7 @@ export function SettingsView() {
     void window.sonora.app.info().then(setInfo)
   }, [])
 
-  const update = (patch: Partial<Settings>): void => {
+  const update = (patch: SettingsPatch): void => {
     void window.sonora.settings.update(patch)
   }
   const widget = (key: keyof Settings['widgets'], value: boolean): void =>
@@ -249,7 +510,7 @@ export function SettingsView() {
         <SectionHeader title="Widgets" />
         <Toggle
           label="Taskbar widget"
-          description="Compact controls and audio visualiser pinned above the taskbar, next to the system tray"
+          description="Controls and an audio visualiser pinned to an edge of the screen, clear of the taskbar"
           checked={settings.widgets.taskbar}
           onChange={(v) => widget('taskbar', v)}
         />
@@ -265,22 +526,20 @@ export function SettingsView() {
           checked={settings.widgets.toast}
           onChange={(v) => widget('toast', v)}
         />
-        <label className="flex items-center justify-between gap-6 px-3 py-3">
-          <div>
-            <div className="text-sm font-medium">Toast duration</div>
-            <div className="text-xs text-ink-2">{(settings.toastDurationMs / 1000).toFixed(1)} seconds</div>
-          </div>
-          <input
-            type="range"
-            className="range w-40"
-            min={1500}
-            max={8000}
-            step={250}
-            value={settings.toastDurationMs}
-            onChange={(e) => update({ toastDurationMs: Number(e.target.value) })}
-          />
-        </label>
       </section>
+
+      {settings.widgets.taskbar && (
+        <TaskbarWidgetSettings value={settings.widget} onChange={(patch) => update({ widget: patch })} />
+      )}
+      {settings.widgets.mini && <MiniPlayerSettings value={settings.mini} onChange={(patch) => update({ mini: patch })} />}
+      {settings.widgets.toast && (
+        <ToastSettings
+          value={settings.toast}
+          durationMs={settings.toastDurationMs}
+          onChange={(patch) => update({ toast: patch })}
+          onDuration={(toastDurationMs) => update({ toastDurationMs })}
+        />
+      )}
 
       <section className="mb-8">
         <SectionHeader title="Playback" />

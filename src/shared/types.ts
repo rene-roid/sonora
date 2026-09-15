@@ -188,8 +188,135 @@ export interface Rect {
   height: number
 }
 
+/** Corner or edge of the work area an overlay window (taskbar widget, toast) is glued to. */
+export type OverlayAnchor =
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right'
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+
+export const OVERLAY_ANCHORS: { value: OverlayAnchor; label: string }[] = [
+  { value: 'top-left', label: 'Top left' },
+  { value: 'top-center', label: 'Top centre' },
+  { value: 'top-right', label: 'Top right' },
+  { value: 'bottom-left', label: 'Bottom left' },
+  { value: 'bottom-center', label: 'Bottom centre' },
+  { value: 'bottom-right', label: 'Bottom right' }
+]
+
+/**
+ * How an overlay's card is filled. `solid` is an opaque panel dimmed by `opacity`; `acrylic` is
+ * the blurred system backdrop, so whatever sits behind the window shows through it.
+ */
+export type OverlayBackground = 'solid' | 'acrylic'
+
+export const OVERLAY_BACKGROUNDS: { value: OverlayBackground; label: string; hint: string }[] = [
+  { value: 'solid', label: 'Solid', hint: 'An opaque card, dimmed to the opacity you pick' },
+  { value: 'acrylic', label: 'Acrylic', hint: 'Frosted glass that blurs whatever sits behind it' }
+]
+
+/**
+ * Windows 11 22H2 is the first build that can draw the acrylic system backdrop behind a window.
+ * Everywhere else acrylic mode falls back to a translucent glass card with no blur, since a
+ * transparent window gives `backdrop-filter` nothing to sample.
+ */
+export function supportsNativeAcrylic(platform: string, release: string): boolean {
+  return platform === 'win32' && Number(release.split('.')[2] ?? 0) >= 22621
+}
+
+/** How long an overlay takes to settle on a new opacity, in CSS and in main alike. */
+export const OVERLAY_FADE_MS = 250
+
+/**
+ * The look every floating window shares: taskbar widget, mini player and toast. The hover and
+ * click-through options only apply to the two the pointer can actually interact with.
+ */
+export interface OverlayChrome {
+  background: OverlayBackground
+  /** Resting opacity, 0.35 to 1. */
+  opacity: number
+  /** Fade the window down to `hoverOpacity` while the pointer is over it, to see past it. */
+  fadeOnHover: boolean
+  /** Opacity while hovered, 0.05 to 1. Only ever dims further than `opacity`, never brighter. */
+  hoverOpacity: number
+  /** Let clicks fall through to whatever is behind the window, except on its own controls. */
+  clickThrough: boolean
+}
+
+export const defaultOverlayChrome: OverlayChrome = {
+  background: 'solid',
+  opacity: 1,
+  fadeOnHover: false,
+  hoverOpacity: 0.35,
+  clickThrough: false
+}
+
+/**
+ * Opacity an overlay should be showing right now. Hovering only ever dims further, so a hover
+ * level left above the resting one cannot make the window brighter than the user asked for.
+ */
+export function overlayOpacity(o: OverlayChrome, hovering: boolean): number {
+  return o.fadeOnHover && hovering ? Math.min(o.opacity, o.hoverOpacity) : o.opacity
+}
+
+/** Layout and chrome of the taskbar widget. Main sizes and places the window from these. */
+export interface WidgetOptions extends OverlayChrome {
+  anchor: OverlayAnchor
+  /** Shorter bar with the artist line dropped. */
+  compact: boolean
+  visualizer: boolean
+  /** Thin accent progress line along the bottom edge. */
+  progress: boolean
+  cover: boolean
+  /** `1:23 / 4:56` next to the transport buttons. */
+  elapsed: boolean
+}
+
+export const defaultWidgetOptions: WidgetOptions = {
+  ...defaultOverlayChrome,
+  anchor: 'bottom-right',
+  compact: false,
+  visualizer: true,
+  progress: true,
+  cover: true,
+  elapsed: false
+}
+
+/** The mini player has no layout options of its own; its position lives in `windowBounds`. */
+export type MiniOptions = OverlayChrome
+
+export const defaultMiniOptions: MiniOptions = defaultOverlayChrome
+
+/** Track-change toast. It never takes the mouse, so only the card's look and its corner apply. */
+export interface ToastOptions extends Pick<OverlayChrome, 'background' | 'opacity'> {
+  anchor: OverlayAnchor
+}
+
+export const defaultToastOptions: ToastOptions = {
+  anchor: 'bottom-right',
+  background: 'solid',
+  opacity: 1
+}
+
+/**
+ * Footprint of the taskbar widget for a given set of options. Lives here so the main process
+ * can size the window and the renderer can lay out to exactly the same box. The deltas are the
+ * content widths in `widget/main.tsx`, each with the flex gap that goes away with it.
+ */
+export function widgetSize(o: WidgetOptions): { width: number; height: number } {
+  const c = o.compact
+  const width = (c ? 288 : 340) - (o.cover ? 0 : c ? 44 : 64) + (o.elapsed ? (c ? 72 : 74) : 0)
+  return { width, height: c ? 52 : 76 }
+}
+
 export interface Settings {
   widgets: { mini: boolean; taskbar: boolean; toast: boolean }
+  /** Position and chrome of the taskbar widget; `widgets.taskbar` decides whether it is shown. */
+  widget: WidgetOptions
+  mini: MiniOptions
+  toast: ToastOptions
   volume: number
   muted: boolean
   repeat: RepeatMode
@@ -211,6 +338,9 @@ export interface Settings {
 
 export const defaultSettings: Settings = {
   widgets: { mini: false, taskbar: true, toast: true },
+  widget: defaultWidgetOptions,
+  mini: defaultMiniOptions,
+  toast: defaultToastOptions,
   volume: 0.8,
   muted: false,
   repeat: 'off',
@@ -224,6 +354,17 @@ export const defaultSettings: Settings = {
   resume: null,
   recents: [],
   cacheMaxGb: 5
+}
+
+/**
+ * What a caller may hand to `settings.update`. The nested groups merge field by field, so a
+ * window can flip one option without having to echo back the rest.
+ */
+export type SettingsPatch = Partial<Omit<Settings, 'widget' | 'widgets' | 'mini' | 'toast'>> & {
+  widget?: Partial<WidgetOptions>
+  mini?: Partial<MiniOptions>
+  toast?: Partial<ToastOptions>
+  widgets?: Partial<Settings['widgets']>
 }
 
 export interface LyricLine {
