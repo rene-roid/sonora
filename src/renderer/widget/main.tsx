@@ -1,46 +1,11 @@
-import { useEffect, useState } from 'react'
 import { bootstrap } from '@renderer/shared/bootstrap'
 import { Cover } from '@renderer/shared/Cover'
 import { TransportControls } from '@renderer/shared/Controls'
+import { useOverlayChrome } from '@renderer/shared/overlay'
 import { usePlayerState } from '@renderer/shared/playerStore'
 import { useSettings } from '@renderer/shared/sessionStore'
 import { formatTime } from '@shared/format'
-import { widgetOpacity } from '@shared/types'
 import { Visualizer } from './Visualizer'
-
-/** Whether the pointer is over the widget. Main watches the cursor and tells us. */
-function useHovered(): boolean {
-  const [hovered, setHovered] = useState(false)
-  useEffect(() => window.sonora.widget.onHover(setHovered), [])
-  return hovered
-}
-
-/**
- * Click-through mode: the window ignores the mouse, so clicks land on whatever is behind the
- * widget, and takes it back for as long as the pointer is over one of the widget's own buttons.
- * That is what keeps the transport and the cover usable while the rest of the bar stays out of
- * the way. Main polls the cursor and hands the point over, because a window ignoring the mouse
- * is sent no move messages of its own; resolving it against the layout is this side's job.
- */
-function useClickThrough(enabled: boolean): void {
-  useEffect(() => {
-    if (!enabled) return
-    let ignoring: boolean | undefined
-    const ignore = (next: boolean): void => {
-      if (next === ignoring) return
-      ignoring = next
-      window.sonora.window.setIgnoreMouse(next)
-    }
-    ignore(true)
-    const off = window.sonora.widget.onHitTest((p) => {
-      ignore(!p || !document.elementFromPoint(p.x, p.y)?.closest('button'))
-    })
-    return () => {
-      off()
-      window.sonora.window.setIgnoreMouse(false)
-    }
-  }, [enabled])
-}
 
 /**
  * Taskbar-area widget: a small card pinned to one edge of the work area, usually just above
@@ -49,28 +14,15 @@ function useClickThrough(enabled: boolean): void {
  */
 function TaskbarWidget() {
   const o = useSettings().widget
-  const hovered = useHovered()
+  const { card, style } = useOverlayChrome(o)
   const track = usePlayerState((s) => s.track)
   const position = usePlayerState((s) => s.position)
   const duration = usePlayerState((s) => s.duration)
   const pct = duration > 0 ? (position / duration) * 100 : 0
   const art = o.compact ? 36 : 54
 
-  useClickThrough(o.clickThrough)
-
-  // Acrylic asks the system for the card's fill, which only Windows 11 draws; anywhere else it
-  // degrades to a translucent glass card that still shows the wallpaper, just without the blur.
-  const nativeAcrylic = o.background === 'acrylic' && window.sonora.nativeAcrylic
-  const card =
-    o.background === 'solid' ? 'acrylic acrylic-flat' : nativeAcrylic ? 'acrylic-sheet' : 'acrylic-glass'
-
   return (
-    <div
-      className="h-full w-full transition-opacity duration-150"
-      // A system backdrop is painted outside the page, so CSS cannot fade it: main fades the
-      // whole window instead and this stays fully opaque. Every other mode fades here.
-      style={{ opacity: nativeAcrylic ? 1 : widgetOpacity(o, hovered) }}
-    >
+    <div className="h-full w-full" style={style}>
       <div
         className={`${card} relative flex h-full w-full items-center overflow-hidden ${
           o.compact ? 'gap-2 px-2' : 'gap-2.5 px-2.5'

@@ -2,18 +2,26 @@ import { Maximize2, X } from 'lucide-react'
 import { bootstrap } from '@renderer/shared/bootstrap'
 import { Cover } from '@renderer/shared/Cover'
 import { TransportControls } from '@renderer/shared/Controls'
+import { useOverlayChrome } from '@renderer/shared/overlay'
 import { player, usePlayerState } from '@renderer/shared/playerStore'
+import { useSettings } from '@renderer/shared/sessionStore'
 import { formatTime } from '@shared/format'
 
+/**
+ * Floating always-on-top player. The card is the drag handle, so with click-through on it can
+ * only be moved by turning that option off again; its controls are all `no-drag`, which is also
+ * what marks them as the parts that keep taking the mouse.
+ */
 function MiniPlayer() {
+  const { card, style } = useOverlayChrome(useSettings().mini)
   const track = usePlayerState((s) => s.track)
   const position = usePlayerState((s) => s.position)
   const duration = usePlayerState((s) => s.duration)
   const pct = duration > 0 ? (position / duration) * 100 : 0
 
   return (
-    <div className="h-full w-full">
-      <div className="acrylic acrylic-flat drag relative flex h-full w-full items-center gap-3 p-2.5 pr-3">
+    <div className="h-full w-full" style={style}>
+      <div className={`${card} drag relative flex h-full w-full items-center gap-3 p-2.5 pr-3`}>
         <Cover id={track?.coverArt} size={200} className="h-[84px] w-[84px]" />
         <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch">
           <div className="min-w-0 pr-12">

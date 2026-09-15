@@ -126,14 +126,14 @@ const api = {
     setIgnoreMouse: (ignore: boolean): void => ipcRenderer.send('window:setIgnoreMouse', ignore)
   },
 
-  /** Taskbar widget only. Main watches the cursor and reports it to the widget's page. */
-  widget: {
+  /** Floating windows only. Main watches the cursor and reports it to the window's page. */
+  overlay: {
     onHover(cb: (hovering: boolean) => void): Unsubscribe {
-      return subscribe('widget:hover', cb)
+      return subscribe('overlay:hover', cb)
     },
     /** Cursor in window coordinates while click-through is on, or null once it leaves. */
     onHitTest(cb: (point: { x: number; y: number } | null) => void): Unsubscribe {
-      return subscribe('widget:hitTest', cb)
+      return subscribe('overlay:hitTest', cb)
     }
   },
 
@@ -142,6 +142,8 @@ const api = {
       return subscribe('toast:show', cb)
     },
     shown: (): void => ipcRenderer.send('window:control', 'toastShown'),
+    /** The card has started its exit; an acrylic toast fades its window out alongside it. */
+    leaving: (): void => ipcRenderer.send('window:control', 'toastLeaving'),
     done: (): void => ipcRenderer.send('window:control', 'toastDone')
   },
 
