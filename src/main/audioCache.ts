@@ -27,6 +27,19 @@ function budget(): number {
   return getSettings().cacheMaxGb * GB
 }
 
+/**
+ * Bytes written since the last eviction pass. Eviction stats every file in the cache, which for a
+ * multi-gigabyte budget is thousands of them, so it waits until enough has landed to be worth it
+ * rather than running after every single track. The wait is a slice of the budget, capped, so the
+ * overshoot it allows stays proportional however small the budget is set.
+ */
+const EVICT_EVERY_MAX = 256 * 1024 * 1024
+let sinceEvict = 0
+
+function evictEvery(): number {
+  return Math.min(EVICT_EVERY_MAX, Math.max(16 * 1024 * 1024, budget() / 16))
+}
+
 /** One download per track, however many windows ask for it. */
 const inflight = new Map<string, Promise<string | null>>()
 
@@ -58,7 +71,8 @@ async function download(id: string, url: string): Promise<string | null> {
     const part = `${file}.part`
     await writeFile(part, body)
     await rename(part, file)
-    await evict()
+    sinceEvict += body.byteLength
+    if (sinceEvict >= evictEvery()) await evict()
     return file
   } catch {
     return null
@@ -103,6 +117,7 @@ async function entries(): Promise<Entry[]> {
 
 /** Delete the oldest files until the cache fits the budget. Also runs when the budget is lowered. */
 export async function evict(): Promise<void> {
+  sinceEvict = 0
   const max = budget()
   const all = await entries()
   let total = all.reduce((n, e) => n + e.size, 0)
@@ -119,5 +134,6 @@ export async function stats(): Promise<{ bytes: number; count: number }> {
 }
 
 export function clear(): Promise<void> {
+  sinceEvict = 0
   return rm(dir(), { recursive: true, force: true })
 }

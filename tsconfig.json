@@ -1,4 +1,10 @@
 {
   "files": [],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }],
+  // Compiles nothing itself, but Bun resolves import aliases from the nearest tsconfig, so the
+  // test runner needs the same two the Vite config sets up.
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@shared/*": ["src/shared/*"], "@renderer/*": ["src/renderer/*"] }
+  }
 }

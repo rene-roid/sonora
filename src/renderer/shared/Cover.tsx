@@ -19,7 +19,18 @@ export function Cover({
   return (
     <div className={`relative shrink-0 overflow-hidden bg-surface-3 ${rounded} ${className}`}>
       {url ? (
-        <img src={url} alt="" draggable={false} onError={() => setFailed(true)} className="h-full w-full object-cover" />
+        // A track list or an artist grid is thousands of these, and the server is asked for every
+        // one it decodes: lazy keeps that to what has been scrolled to, async keeps the decode off
+        // the main thread so a long list still scrolls while its covers arrive.
+        <img
+          src={url}
+          alt=""
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+          className="h-full w-full object-cover"
+        />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-ink-3">
           <Music2 className="h-1/3 w-1/3" />

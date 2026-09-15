@@ -2,7 +2,7 @@ import { app, BrowserWindow, globalShortcut, nativeTheme, screen, session } from
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { registerArtProtocol, registerArtScheme } from './artCache'
 import { setupIpc, setPlayerHooks, sendCommand, playerState } from './ipc'
-import { getSettings, onSettingsChange, updateSettings } from './store'
+import { flushSettings, getSettings, onSettingsChange, updateSettings } from './store'
 import { sanitizeResume } from '@shared/types'
 import { loadSession } from './credentials'
 import { createTray, rebuildTrayMenu } from './tray'
@@ -134,13 +134,24 @@ app.whenReady().then(() => {
 
 let lastResume = ''
 
+/**
+ * Cheap stand-in for the resume state's identity. Serialising the queue to compare it would walk
+ * every track on every checkpoint, and the queue is the one part of it that only ever changes
+ * wholesale, so its length and ends identify it well enough to skip an unchanged write.
+ */
+function resumeKey(r: ReturnType<typeof sanitizeResume>): string {
+  if (!r) return ''
+  const { queue, index, position } = r
+  return `${queue.length}|${queue[0]?.id ?? ''}|${queue[queue.length - 1]?.id ?? ''}|${index}|${Math.round(position)}`
+}
+
 /** Snapshot the resume point, skipping the write when nothing moved since the last one. */
 function saveResume(): void {
   // Before the host finishes restoring, the queue is still empty and a write would erase the saved one.
   if (!playerState.hostReady) return
   const { queue, index, position } = playerState
   const resume = sanitizeResume({ queue, index, position })
-  const key = JSON.stringify(resume)
+  const key = resumeKey(resume)
   if (key === lastResume) return
   lastResume = key
   updateSettings({ resume })
@@ -156,6 +167,8 @@ app.on('before-quit', () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
+  // Settings reach the disk on a debounce; this is the last chance for one still waiting.
+  flushSettings()
 })
 
 app.on('window-all-closed', () => {

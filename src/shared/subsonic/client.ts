@@ -212,6 +212,12 @@ export class SubsonicClient {
   /**
    * Every album, paged. Subsonic has no endpoint listing moods, so the Moods view derives them
    * from the album tags; 500 is the per-call ceiling the spec allows.
+   *
+   * Deliberately serial. Nothing in the protocol says how many pages there are, so fetching them
+   * in parallel means speculating past the end and throwing away whole 500-album responses --
+   * which trades bandwidth for latency in the wrong direction on exactly the slow, remote links
+   * where the latency would be worth saving. The way this is kept cheap is not fetching it twice:
+   * see the renderer's shared album list.
    */
   async getAllAlbums(max = 5000): Promise<AlbumID3[]> {
     const all: AlbumID3[] = []

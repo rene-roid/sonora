@@ -39,9 +39,30 @@ export function allWindows(): [WindowName, BrowserWindow][] {
   return [...windows.entries()].filter(([, w]) => !w.isDestroyed())
 }
 
+/**
+ * webContents id to window name. The event relay resolves the sender of every emit, which at
+ * thirty audio frames a second is often enough that walking the window list for it is wasted.
+ */
+const namesById = new Map<number, WindowName>()
+
 export function windowNameOf(webContentsId: number): WindowName | undefined {
-  for (const [name, w] of allWindows()) if (w.webContents.id === webContentsId) return name
-  return undefined
+  return namesById.get(webContentsId)
+}
+
+/**
+ * Put a window in the registry and take it back out when it closes. The id is captured up front
+ * because a closed window's webContents can no longer be asked for it, and the removal is
+ * identity-checked: an overlay rebuilt onto a different surface registers its replacement in the
+ * same tick, and the old window's `closed` must not then tear that replacement out.
+ */
+function register(name: WindowName, win: BrowserWindow): void {
+  const id = win.webContents.id
+  windows.set(name, win)
+  namesById.set(id, name)
+  win.on('closed', () => {
+    namesById.delete(id)
+    if (windows.get(name) === win) windows.delete(name)
+  })
 }
 
 function preloadPath(): string {
@@ -137,9 +158,8 @@ export function createHostWindow(): BrowserWindow {
       autoplayPolicy: 'no-user-gesture-required'
     }
   })
-  windows.set('host', win)
+  register('host', win)
   forwardConsole('host', win)
-  win.on('closed', () => windows.delete('host'))
   loadPage(win, 'host')
   return win
 }
@@ -162,11 +182,10 @@ export function createMainWindow(): BrowserWindow {
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#0f0f0f', symbolColor: '#e5e5e5', height: 36 }
   })
-  windows.set('main', win)
+  register('main', win)
   forwardConsole('main', win)
   rememberBounds('main', win)
   win.on('ready-to-show', () => win.show())
-  win.on('closed', () => windows.delete('main'))
   win.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url)
     return { action: 'deny' }
@@ -194,14 +213,13 @@ export function createToastWindow(): BrowserWindow {
     maximizable: false,
     fullscreenable: false
   })
-  windows.set('toast', win)
+  register('toast', win)
   forwardConsole('toast', win)
   win.setAlwaysOnTop(true, 'screen-saver')
   win.setIgnoreMouseEvents(true, { forward: true })
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   // An acrylic toast fades its whole window in and out, so it starts from nothing.
   if (overlays.toast.acrylic) fadeTo('toast', 0, false)
-  win.on('closed', () => windows.delete('toast'))
   loadPage(win, 'toast')
   return win
 }
@@ -259,7 +277,7 @@ export function createMiniWindow(): BrowserWindow {
     maximizable: false,
     fullscreenable: false
   })
-  windows.set('mini', win)
+  register('mini', win)
   forwardConsole('mini', win)
   win.setAlwaysOnTop(true, 'floating')
   rememberBounds('mini', win)
@@ -268,10 +286,7 @@ export function createMiniWindow(): BrowserWindow {
     watchPointer('mini')
     win.showInactive()
   })
-  win.on('closed', () => {
-    windows.delete('mini')
-    watchPointer('mini')
-  })
+  win.on('closed', () => watchPointer('mini'))
   loadPage(win, 'mini')
   return win
 }
@@ -294,7 +309,7 @@ export function createWidgetWindow(): BrowserWindow {
     maximizable: false,
     fullscreenable: false
   })
-  windows.set('widget', win)
+  register('widget', win)
   forwardConsole('widget', win)
   win.setAlwaysOnTop(true, 'floating')
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false })
@@ -303,10 +318,7 @@ export function createWidgetWindow(): BrowserWindow {
     watchPointer('widget')
     win.showInactive()
   })
-  win.on('closed', () => {
-    windows.delete('widget')
-    watchPointer('widget')
-  })
+  win.on('closed', () => watchPointer('widget'))
   loadPage(win, 'widget')
   return win
 }
@@ -459,9 +471,9 @@ function refreshSurface(name: OverlayName): void {
   if (!win || wantsAcrylic(name) === overlays[name].acrylic) return
   // The mini player's position is saved on a debounce; a drag just before this would be lost.
   if (name === 'mini') updateSettings({ windowBounds: { mini: win.getBounds() } })
-  // destroy, not close: the replacement is built in this same tick, before 'closed' would fire.
+  // destroy, not close: the replacement is built in this same tick. The registry drops a window
+  // by identity, so the old one's `closed` cannot take the replacement with it whenever it lands.
   win.destroy()
-  windows.delete(name)
   setHovered(name, false)
   creators[name]()
 }
@@ -527,9 +539,14 @@ export function showMainWindow(): void {
   win.focus()
 }
 
-/** Send a channel + args to every window except the given webContents id. */
+/**
+ * Send a channel + args to every window except the given webContents id. Walks the registry
+ * itself rather than a copy of it: position updates go through here four times a second and
+ * audio frames thirty, and none of them have any use for an array that is thrown away after.
+ */
 export function broadcast(channel: string, args: unknown[], exceptId?: number, only?: Set<number>): void {
-  for (const [, w] of allWindows()) {
+  for (const w of windows.values()) {
+    if (w.isDestroyed()) continue
     const id = w.webContents.id
     if (id === exceptId) continue
     if (only && !only.has(id)) continue

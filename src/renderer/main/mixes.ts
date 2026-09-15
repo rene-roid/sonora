@@ -9,6 +9,15 @@
 import type { SubsonicClient } from '@shared/subsonic/client'
 import type { AlbumID3 } from '@shared/subsonic/types'
 import type { MixKind, Track, View } from '@shared/types'
+import { mapLimit } from '@shared/async'
+
+/**
+ * Where the whole album list comes from. Injected rather than imported, so this module stays a
+ * plain function of a client -- the renderer hands in its cached copy, and the unit tests hand in
+ * nothing and get the straight server walk.
+ */
+export type AlbumSource = (client: SubsonicClient) => Promise<AlbumID3[]>
+const serverAlbums: AlbumSource = (client) => client.getAllAlbums()
 
 /** What one mix is built around. `value` is the tag text, or the artist's name. */
 export interface MixSeed {
@@ -31,6 +40,8 @@ const PER_SEED_ARTIST = 8
 const MOOD_ALBUMS = 30
 /** Albums opened for the seed artist of an artist mix, for the same reason. */
 const ARTIST_ALBUMS = 5
+/** Album requests in flight at once wherever a list of albums has to be opened one by one. */
+export const ALBUM_FETCH_LIMIT = 6
 
 /** Compilation and placeholder credits make a nonsense artist mix, so they never become seeds. */
 const NOT_AN_ARTIST = /^(various(\s+artists)?|va|unknown artist|soundtrack|\[?unknown\]?)$/i
@@ -129,14 +140,19 @@ export async function mixSeeds(client: SubsonicClient, count = 6): Promise<MixSe
 /** Songs off `albums`, capped at `max` albums so one mix never walks the whole library. */
 async function songsFrom(client: SubsonicClient, albums: AlbumID3[], max: number, seed: string): Promise<Track[]> {
   const picked = shuffle(albums, seed).slice(0, max)
-  const full = await Promise.all(picked.map((a) => client.getAlbum(a.id)))
+  const full = await mapLimit(picked, ALBUM_FETCH_LIMIT, (a) => client.getAlbum(a.id))
   return full.flatMap((a) => a.song)
 }
 
 /** Albums carrying the mood tag. Subsonic has no mood endpoint, so this is a pass over the list. */
-async function moodPool(client: SubsonicClient, mood: string, seed: string): Promise<Track[]> {
-  const albums = (await client.getAllAlbums()).filter((a) => a.moods?.includes(mood))
-  return songsFrom(client, albums, MOOD_ALBUMS, seed)
+async function moodPool(
+  client: SubsonicClient,
+  mood: string,
+  seed: string,
+  albums: AlbumSource
+): Promise<Track[]> {
+  const tagged = (await albums(client)).filter((a) => a.moods?.includes(mood))
+  return songsFrom(client, tagged, MOOD_ALBUMS, seed)
 }
 
 /**
@@ -160,12 +176,16 @@ async function artistMix(client: SubsonicClient, name: string, seed: string): Pr
   return interleave(lead, rest)
 }
 
-export async function buildMix(client: SubsonicClient, seed: MixSeed): Promise<Track[]> {
+export async function buildMix(
+  client: SubsonicClient,
+  seed: MixSeed,
+  albums: AlbumSource = serverAlbums
+): Promise<Track[]> {
   const day = daySeed(seed)
   if (seed.kind === 'artist') return artistMix(client, seed.value, day)
   const pool =
     seed.kind === 'mood'
-      ? await moodPool(client, seed.value, day)
+      ? await moodPool(client, seed.value, day, albums)
       : await client.getSongsByGenre(seed.value, 500)
   return spread(shuffle(pool, day))
 }

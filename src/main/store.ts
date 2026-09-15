@@ -25,7 +25,19 @@ export const store = new Store<Schema>({
   defaults: { settings: defaultSettings }
 })
 
-export function getSettings(): Settings {
+/**
+ * The live settings, held in memory.
+ *
+ * Every read off `store` is a synchronous read of the whole config file and every write is a
+ * synchronous rewrite of it, and the file carries the resume queue, so it is not small. The
+ * callers are hot -- the cursor watch behind the overlays asks ten times a second per window,
+ * and a volume drag writes on every mouse move -- so the file is read once and the disk is
+ * written on a debounce behind it. Nothing outside this process touches the file: the
+ * single-instance lock sees to that.
+ */
+let cached: Settings | undefined
+
+function readSettings(): Settings {
   const saved = store.get('settings') ?? {}
   return {
     ...defaultSettings,
@@ -38,6 +50,35 @@ export function getSettings(): Settings {
     // Entries written before the shelf stored an origin have no key and cannot be played.
     recents: (saved.recents ?? []).filter((r) => r?.key)
   }
+}
+
+export function getSettings(): Settings {
+  return (cached ??= readSettings())
+}
+
+/**
+ * How long a change may sit in memory before it reaches the disk. Well under the ten-second
+ * resume checkpoint, so a crash loses no more than it already would.
+ */
+const WRITE_DEBOUNCE_MS = 400
+
+let writeTimer: NodeJS.Timeout | undefined
+
+/** Write the settings out now. Called on the debounce, and on the way out so nothing is lost. */
+export function flushSettings(): void {
+  if (writeTimer) {
+    clearTimeout(writeTimer)
+    writeTimer = undefined
+  }
+  if (cached) store.set('settings', cached)
+}
+
+function scheduleWrite(): void {
+  if (writeTimer) return
+  writeTimer = setTimeout(() => {
+    writeTimer = undefined
+    if (cached) store.set('settings', cached)
+  }, WRITE_DEBOUNCE_MS)
 }
 
 const ANCHOR_SET = new Set<string>(OVERLAY_ANCHORS.map((a) => a.value))
@@ -88,16 +129,18 @@ export function onSettingsChange(fn: Listener): () => void {
 }
 
 export function updateSettings(patch: SettingsPatch): Settings {
+  const before = getSettings()
   const next: Settings = {
-    ...getSettings(),
+    ...before,
     ...patch,
-    widgets: { ...getSettings().widgets, ...(patch.widgets ?? {}) },
-    widget: sanitizeWidget({ ...getSettings().widget, ...(patch.widget ?? {}) }),
-    mini: sanitizeMini({ ...getSettings().mini, ...(patch.mini ?? {}) }),
-    toast: sanitizeToast({ ...getSettings().toast, ...(patch.toast ?? {}) }),
-    windowBounds: { ...getSettings().windowBounds, ...(patch.windowBounds ?? {}) }
+    widgets: { ...before.widgets, ...(patch.widgets ?? {}) },
+    widget: sanitizeWidget({ ...before.widget, ...(patch.widget ?? {}) }),
+    mini: sanitizeMini({ ...before.mini, ...(patch.mini ?? {}) }),
+    toast: sanitizeToast({ ...before.toast, ...(patch.toast ?? {}) }),
+    windowBounds: { ...before.windowBounds, ...(patch.windowBounds ?? {}) }
   }
-  store.set('settings', next)
+  cached = next
+  scheduleWrite()
   for (const fn of listeners) fn(next)
   return next
 }
