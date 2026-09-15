@@ -278,6 +278,22 @@ export class SubsonicClient {
     return { ...r.playlist, entry: (r.playlist.entry ?? []).map(childToTrack) }
   }
 
+  /**
+   * Create a playlist, optionally seeded with songs, and return its id. The spec leaves the
+   * response body optional, so servers that answer with a bare ok are resolved by looking the
+   * new playlist up by name.
+   */
+  async createPlaylist(name: string, songIds: string[] = []): Promise<string> {
+    const r = await this.call<Partial<PlaylistResponse>>('createPlaylist', { name, songId: songIds })
+    if (r.playlist?.id) return r.playlist.id
+    // Names are not unique, so the most recently created match is the one just made.
+    const mine = (await this.getPlaylists())
+      .filter((p) => p.name === name)
+      .sort((a, b) => (b.created ?? '').localeCompare(a.created ?? ''))
+    if (!mine[0]) throw new SubsonicError(`Server did not report the new playlist "${name}"`)
+    return mine[0].id
+  }
+
   /** Add and/or remove songs. Indexes refer to the playlist's current order, so removals are applied server-side in one call. */
   updatePlaylist(
     playlistId: string,

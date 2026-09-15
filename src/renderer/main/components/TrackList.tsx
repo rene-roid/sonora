@@ -20,6 +20,7 @@ import { player, usePlayerState } from '@renderer/shared/playerStore'
 import { useClient } from '@renderer/shared/sessionStore'
 import { nav } from '../nav'
 import { playFrom } from '../recents'
+import { playlists, usePlaylistsRevision } from '../playlists'
 import { useAsync } from '../useAsync'
 import { ContextMenu, MenuItem, MenuLabel, MenuSeparator, useContextMenu } from './ContextMenu'
 
@@ -206,7 +207,8 @@ export function TrackMenu({
   const client = useClient()
   const [picking, setPicking] = useState(false)
   // Already warm from the sidebar's copy of the same key, so the picker opens without a wait.
-  const playlists = useAsync('playlists', () => (picking ? client?.getPlaylists() : undefined), [client, picking])
+  const revision = usePlaylistsRevision()
+  const picked = useAsync('playlists', () => (picking ? client?.getPlaylists() : undefined), [client, picking, revision])
 
   const run = (fn: () => void) => () => {
     fn()
@@ -226,10 +228,14 @@ export function TrackMenu({
             Add to playlist
           </MenuItem>
           <MenuSeparator />
-          {playlists.loading && <MenuLabel>Loading…</MenuLabel>}
-          {playlists.error && <MenuLabel>{playlists.error}</MenuLabel>}
-          {playlists.data?.length === 0 && <MenuLabel>No playlists</MenuLabel>}
-          {playlists.data?.map((p) => (
+          <MenuItem icon={<Plus size={14} />} onClick={run(() => playlists.newPlaylist([track]))}>
+            New playlist…
+          </MenuItem>
+          <MenuSeparator />
+          {picked.loading && <MenuLabel>Loading…</MenuLabel>}
+          {picked.error && <MenuLabel>{picked.error}</MenuLabel>}
+          {picked.data?.length === 0 && <MenuLabel>No playlists</MenuLabel>}
+          {picked.data?.map((p) => (
             <MenuItem key={p.id} icon={<ListMusic size={14} />} onClick={() => addTo(p.id)}>
               {p.name}
             </MenuItem>

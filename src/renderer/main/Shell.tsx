@@ -15,6 +15,7 @@ import { MixView } from './views/Mixes'
 import { ArtistView } from './views/ArtistView'
 import { AlbumView } from './views/AlbumView'
 import { PlaylistView } from './views/PlaylistView'
+import { NewPlaylistDialog } from './components/NewPlaylistDialog'
 import { SearchView } from './views/SearchView'
 import { Favorites } from './views/Favorites'
 import { SettingsView } from './views/SettingsView'
@@ -92,6 +93,7 @@ export function Shell() {
         {showQueue && <QueuePanel />}
       </div>
       <NowPlayingBar />
+      <NewPlaylistDialog />
     </div>
   )
 }

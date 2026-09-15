@@ -1,9 +1,10 @@
-import { Trash2, X } from 'lucide-react'
+import { ListPlus, Trash2, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { formatTime } from '@shared/format'
 import { Cover } from '@renderer/shared/Cover'
 import { player, usePlayerState } from '@renderer/shared/playerStore'
 import { nav } from '../nav'
+import { playlists } from '../playlists'
 
 export function QueuePanel() {
   const queue = usePlayerState((s) => s.queue)
@@ -21,6 +22,9 @@ export function QueuePanel() {
           Queue <span className="ml-1 text-xs font-normal text-ink-3">{queue.length}</span>
         </div>
         <div className="flex items-center gap-1">
+          <button className="icon-btn h-7 w-7" title="Save queue as playlist" onClick={() => playlists.newPlaylist(queue)} disabled={!queue.length}>
+            <ListPlus size={15} />
+          </button>
           <button className="icon-btn h-7 w-7" title="Clear queue" onClick={player.clearQueue} disabled={!queue.length}>
             <Trash2 size={14} />
           </button>
