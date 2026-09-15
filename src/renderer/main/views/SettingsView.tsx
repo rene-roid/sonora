@@ -116,7 +116,9 @@ function Connections({ session }: { session: Session }) {
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://music.example.com"
         />
-        <GhostButton disabled={!url.trim()}>Add</GhostButton>
+        <GhostButton type="submit" disabled={!url.trim()}>
+          Add
+        </GhostButton>
       </form>
     </section>
   )
