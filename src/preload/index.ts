@@ -1,4 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { release } from 'node:os'
+import { supportsNativeAcrylic } from '@shared/types'
 import type {
   PlayerCommandName,
   PlayerCommands,
@@ -28,6 +30,8 @@ function subscribe<T>(channel: string, cb: (payload: T) => void): Unsubscribe {
 
 const api = {
   windowName,
+  /** Windows 11 22H2+; decides whether the widget's acrylic mode gets a real system backdrop. */
+  nativeAcrylic: supportsNativeAcrylic(process.platform, release()),
 
   player: {
     on<K extends PlayerEventName>(event: K, cb: (payload: PlayerEvents[K]) => void): Unsubscribe {
@@ -120,6 +124,17 @@ const api = {
     hide: (): void => ipcRenderer.send('window:control', 'hide'),
     showMain: (): void => ipcRenderer.send('window:control', 'showMain'),
     setIgnoreMouse: (ignore: boolean): void => ipcRenderer.send('window:setIgnoreMouse', ignore)
+  },
+
+  /** Taskbar widget only. Main watches the cursor and reports it to the widget's page. */
+  widget: {
+    onHover(cb: (hovering: boolean) => void): Unsubscribe {
+      return subscribe('widget:hover', cb)
+    },
+    /** Cursor in window coordinates while click-through is on, or null once it leaves. */
+    onHitTest(cb: (point: { x: number; y: number } | null) => void): Unsubscribe {
+      return subscribe('widget:hitTest', cb)
+    }
   },
 
   toast: {

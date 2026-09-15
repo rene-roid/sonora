@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, screen, session } from 'electron'
+import { app, BrowserWindow, globalShortcut, nativeTheme, screen, session } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { setupIpc, setPlayerHooks, sendCommand, playerState } from './ipc'
 import { getSettings, onSettingsChange, updateSettings } from './store'
@@ -62,6 +62,9 @@ function registerMediaKeys(enabled: boolean): void {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('dev.sonora.app')
+  // Sonora is dark-only, and the system-drawn surfaces follow this: without it Windows hands the
+  // widget's acrylic backdrop the light tint, which its dark text is unreadable on.
+  nativeTheme.themeSource = 'dark'
 
   // Close-to-tray for the main window (registered before any window exists).
   app.on('browser-window-created', (_e, win) => {

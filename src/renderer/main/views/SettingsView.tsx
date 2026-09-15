@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import type { NormalizeMode, Session, Settings, SettingsPatch, WidgetAnchor, WidgetOptions } from '@shared/types'
-import { WIDGET_ANCHORS } from '@shared/types'
+import type {
+  NormalizeMode,
+  Session,
+  Settings,
+  SettingsPatch,
+  WidgetAnchor,
+  WidgetBackground,
+  WidgetOptions
+} from '@shared/types'
+import { WIDGET_ANCHORS, WIDGET_BACKGROUNDS } from '@shared/types'
 import type { ServerProbe } from '@shared/subsonic/client'
 import { useSessionStore, useSettings } from '@renderer/shared/sessionStore'
 import { GhostButton, PageTitle, SectionHeader, Spinner } from '../components/ui'
@@ -182,12 +190,79 @@ function AnchorPicker({ value, onChange }: { value: WidgetAnchor; onChange: (v: 
   )
 }
 
+/** Card fill: an opaque panel, or the system's frosted glass. */
+function BackgroundPicker({ value, onChange }: { value: WidgetBackground; onChange: (v: WidgetBackground) => void }) {
+  const chosen = WIDGET_BACKGROUNDS.find((b) => b.value === value)
+  const degraded = value === 'acrylic' && !window.sonora.nativeAcrylic
+  return (
+    <div className="flex items-center justify-between gap-6 rounded-md px-3 py-3">
+      <div>
+        <div className="text-sm font-medium">Background</div>
+        <div className="text-xs text-ink-2">
+          {degraded ? 'Windows 11 blurs what is behind the widget; here it falls back to a plain translucent card' : chosen?.hint}
+        </div>
+      </div>
+      <div className="flex shrink-0 rounded-md border border-white/10 p-0.5">
+        {WIDGET_BACKGROUNDS.map((b) => (
+          <button
+            key={b.value}
+            aria-pressed={b.value === value}
+            onClick={() => onChange(b.value)}
+            className={`rounded px-2.5 py-1 text-xs transition ${
+              b.value === value ? 'bg-accent font-semibold text-black' : 'text-ink-2 hover:text-ink'
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function OpacitySlider({
+  label,
+  description,
+  min,
+  value,
+  onChange
+}: {
+  label: string
+  description: string
+  min: number
+  value: number
+  onChange: (v: number) => void
+}) {
+  const pct = Math.round(value * 100)
+  return (
+    <label className="flex items-center justify-between gap-6 px-3 py-3">
+      <div>
+        <div className="text-sm font-medium">{label}</div>
+        <div className="text-xs text-ink-2">{description}</div>
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        <input
+          type="range"
+          className="range w-40"
+          min={min}
+          max={100}
+          step={5}
+          value={pct}
+          onChange={(e) => onChange(Number(e.target.value) / 100)}
+        />
+        <span className="w-9 shrink-0 text-right text-xs tabular-nums text-ink-3">{pct}%</span>
+      </div>
+    </label>
+  )
+}
+
 /** Everything about the taskbar widget except whether it is shown at all. */
 function TaskbarWidgetSettings({ value, onChange }: { value: WidgetOptions; onChange: (p: Partial<WidgetOptions>) => void }) {
   return (
     <section className="mb-8">
       <SectionHeader title="Taskbar widget" />
       <AnchorPicker value={value.anchor} onChange={(anchor) => onChange({ anchor })} />
+      <BackgroundPicker value={value.background} onChange={(background) => onChange({ background })} />
       <Toggle
         label="Compact view"
         description="A shorter bar with just the title, for when it should stay out of the way"
@@ -218,21 +293,34 @@ function TaskbarWidgetSettings({ value, onChange }: { value: WidgetOptions; onCh
         checked={value.elapsed}
         onChange={(elapsed) => onChange({ elapsed })}
       />
-      <label className="flex items-center justify-between gap-6 px-3 py-3">
-        <div>
-          <div className="text-sm font-medium">Opacity</div>
-          <div className="text-xs text-ink-2">{Math.round(value.opacity * 100)}%</div>
-        </div>
-        <input
-          type="range"
-          className="range w-40"
-          min={35}
-          max={100}
-          step={5}
-          value={Math.round(value.opacity * 100)}
-          onChange={(e) => onChange({ opacity: Number(e.target.value) / 100 })}
+      <OpacitySlider
+        label="Opacity"
+        description={value.fadeOnHover ? 'How solid the widget is when the pointer is away' : 'How solid the widget is'}
+        min={35}
+        value={value.opacity}
+        onChange={(opacity) => onChange({ opacity })}
+      />
+      <Toggle
+        label="Fade when hovered"
+        description="Drop the widget further out of the way while the pointer is over it"
+        checked={value.fadeOnHover}
+        onChange={(fadeOnHover) => onChange({ fadeOnHover })}
+      />
+      {value.fadeOnHover && (
+        <OpacitySlider
+          label="Faded opacity"
+          description="Where it settles while hovered. Never brighter than the opacity above."
+          min={5}
+          value={value.hoverOpacity}
+          onChange={(hoverOpacity) => onChange({ hoverOpacity })}
         />
-      </label>
+      )}
+      <Toggle
+        label="Click through"
+        description="Clicks pass to whatever is behind the widget; its own buttons still work"
+        checked={value.clickThrough}
+        onChange={(clickThrough) => onChange({ clickThrough })}
+      />
     </section>
   )
 }

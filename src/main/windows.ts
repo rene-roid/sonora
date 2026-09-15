@@ -1,8 +1,9 @@
 import { BrowserWindow, app, nativeImage, screen, shell, type BrowserWindowConstructorOptions } from 'electron'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
+import { release } from 'node:os'
 import { is } from '@electron-toolkit/utils'
-import { widgetSize, type Rect, type WindowName } from '@shared/types'
+import { supportsNativeAcrylic, widgetOpacity, widgetSize, type Rect, type WindowName } from '@shared/types'
 import { getSettings, updateSettings } from './store'
 
 const windows = new Map<WindowName, BrowserWindow>()
@@ -15,6 +16,9 @@ const WIDGET_EDGE = 6
 
 /** Windows/Linux: tool windows are skipped by the taskbar, alt-tab and window lists. */
 const OVERLAY_TYPE = process.platform === 'darwin' ? {} : ({ type: 'toolbar' } as const)
+
+/** Whether this machine can draw the widget's acrylic mode as a real system backdrop. */
+export const NATIVE_ACRYLIC = supportsNativeAcrylic(process.platform, release())
 
 export function getWindow(name: WindowName): BrowserWindow | undefined {
   const w = windows.get(name)
@@ -236,15 +240,29 @@ export function createMiniWindow(): BrowserWindow {
   return win
 }
 
+/** Whether the widget should be sitting on the system's acrylic backdrop right now. */
+function wantsAcrylicSurface(): boolean {
+  return NATIVE_ACRYLIC && getSettings().widget.background === 'acrylic'
+}
+
+/** Surface the live widget window was built on; changing it needs a whole new window. */
+let onAcrylicSurface = false
+
 export function createWidgetWindow(): BrowserWindow {
   const existing = getWindow('widget')
   if (existing) return existing
+  onAcrylicSurface = wantsAcrylicSurface()
   const win = new BrowserWindow({
     ...baseOptions('widget'),
     ...widgetBounds(),
     ...OVERLAY_TYPE,
+    // A solid card wants a per-pixel transparent window so nothing paints outside it. The acrylic
+    // backdrop is drawn by the system behind the window, which Windows only does when it is not
+    // `transparent`; the fully clear background colour is what lets that backdrop show through.
+    ...(onAcrylicSurface
+      ? { transparent: false, backgroundColor: '#00000000', backgroundMaterial: 'acrylic' as const }
+      : { transparent: true }),
     frame: false,
-    transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
@@ -258,10 +276,90 @@ export function createWidgetWindow(): BrowserWindow {
   forwardConsole('widget', win)
   win.setAlwaysOnTop(true, 'floating')
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: false })
-  win.on('ready-to-show', () => win.showInactive())
-  win.on('closed', () => windows.delete('widget'))
+  win.on('ready-to-show', () => {
+    applyWidgetOpacity()
+    watchWidgetPointer()
+    win.showInactive()
+  })
+  win.on('closed', () => {
+    windows.delete('widget')
+    watchWidgetPointer()
+  })
   loadPage(win, 'widget')
   return win
+}
+
+/** True while the pointer is inside the widget's bounds. */
+let widgetHovered = false
+let pointerTimer: NodeJS.Timeout | undefined
+/** Last point handed to the page, so a resting cursor costs nothing. `null` means "outside". */
+let sentPoint: { x: number; y: number } | null = null
+
+/**
+ * Cursor watch behind the widget's two get-out-of-the-way options. Neither can learn where the
+ * pointer is from the page: click-through leaves the window ignoring the mouse, and Windows then
+ * stops sending it move messages at all, forwarding included. Polling the cursor from here costs
+ * a couple of microseconds, never gets stuck, and runs only while one of the options is on.
+ *
+ * The hit test itself still belongs to the page, which is the only side that knows where its
+ * buttons ended up, so the point is handed over in window coordinates for it to resolve.
+ */
+function watchWidgetPointer(): void {
+  clearInterval(pointerTimer)
+  pointerTimer = undefined
+  sentPoint = null
+  const { fadeOnHover, clickThrough } = getSettings().widget
+  if (!getWindow('widget') || (!fadeOnHover && !clickThrough)) {
+    setWidgetHovered(false)
+    return
+  }
+  pointerTimer = setInterval(() => {
+    const win = getWindow('widget')
+    if (!win) return watchWidgetPointer()
+    const c = screen.getCursorScreenPoint()
+    const b = win.getBounds()
+    const inside = c.x >= b.x && c.x < b.x + b.width && c.y >= b.y && c.y < b.y + b.height
+    setWidgetHovered(inside)
+    if (!getSettings().widget.clickThrough) return
+    // Window coordinates are DIP, which is what the page measures its layout in too.
+    const point = inside ? { x: c.x - b.x, y: c.y - b.y } : null
+    if (point?.x === sentPoint?.x && point?.y === sentPoint?.y) return
+    sentPoint = point
+    win.webContents.send('widget:hitTest', point)
+  }, 100)
+}
+
+function setWidgetHovered(hovered: boolean): void {
+  if (hovered === widgetHovered) return
+  widgetHovered = hovered
+  applyWidgetOpacity()
+  getWindow('widget')?.webContents.send('widget:hover', hovered)
+}
+
+/**
+ * Acrylic mode paints its backdrop outside the page, so CSS cannot fade it and the window's own
+ * alpha has to. Solid mode keeps its fade in CSS: a per-pixel transparent window and layered
+ * window alpha do not mix well on Windows, and the card there is the only thing on screen anyway.
+ */
+function applyWidgetOpacity(): void {
+  const win = getWindow('widget')
+  if (!win) return
+  win.setOpacity(onAcrylicSurface ? widgetOpacity(getSettings().widget, widgetHovered) : 1)
+}
+
+/**
+ * Swap the widget onto the surface its background mode needs. `transparent` and
+ * `backgroundMaterial` are both fixed at construction, so the window is rebuilt rather than
+ * reconfigured. A no-op when the mode did not actually change.
+ */
+export function refreshWidgetSurface(): void {
+  const win = getWindow('widget')
+  if (!win || wantsAcrylicSurface() === onAcrylicSurface) return
+  // destroy, not close: the replacement is built in this same tick, before 'closed' would fire.
+  win.destroy()
+  windows.delete('widget')
+  setWidgetHovered(false)
+  createWidgetWindow()
 }
 
 /** Where the taskbar widget belongs right now, from its anchor and its layout options. */
@@ -280,7 +378,7 @@ export function widgetBounds(): Rect {
   return { x, y, width, height }
 }
 
-/** Re-anchor and re-size the taskbar widget after a settings change or a display change. */
+/** Re-anchor, re-size and re-fade the taskbar widget after a settings or display change. */
 export function positionWidget(): void {
   const win = getWindow('widget')
   if (!win) return
@@ -289,6 +387,8 @@ export function positionWidget(): void {
   win.setResizable(true)
   win.setBounds(widgetBounds())
   win.setResizable(false)
+  applyWidgetOpacity()
+  watchWidgetPointer()
 }
 
 export function setWidgetEnabled(name: 'mini' | 'widget', enabled: boolean): void {

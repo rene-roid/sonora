@@ -1,6 +1,7 @@
 import Store from 'electron-store'
 import {
   WIDGET_ANCHORS,
+  WIDGET_BACKGROUNDS,
   defaultSettings,
   defaultWidgetOptions,
   type Settings,
@@ -33,15 +34,21 @@ export function getSettings(): Settings {
 }
 
 const WIDGET_ANCHOR_SET = new Set<string>(WIDGET_ANCHORS.map((a) => a.value))
+const WIDGET_BACKGROUND_SET = new Set<string>(WIDGET_BACKGROUNDS.map((b) => b.value))
 
-/** Fill in options added after the stored settings were written, and clamp the opacity. */
+const clamp = (n: number, lo: number, hi: number, fallback: number): number =>
+  Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback
+
+/** Fill in options added after the stored settings were written, and clamp the opacities. */
 function sanitizeWidget(saved: Partial<WidgetOptions> | undefined): WidgetOptions {
   const o = { ...defaultWidgetOptions, ...(saved ?? {}) }
-  const known = WIDGET_ANCHOR_SET.has(o.anchor)
   return {
     ...o,
-    anchor: known ? o.anchor : defaultWidgetOptions.anchor,
-    opacity: Number.isFinite(o.opacity) ? Math.min(1, Math.max(0.35, o.opacity)) : 1
+    anchor: WIDGET_ANCHOR_SET.has(o.anchor) ? o.anchor : defaultWidgetOptions.anchor,
+    background: WIDGET_BACKGROUND_SET.has(o.background) ? o.background : defaultWidgetOptions.background,
+    opacity: clamp(o.opacity, 0.35, 1, 1),
+    // Hover dimming may go far lower than the resting floor; that is the whole point of it.
+    hoverOpacity: clamp(o.hoverOpacity, 0.05, 1, defaultWidgetOptions.hoverOpacity)
   }
 }
 

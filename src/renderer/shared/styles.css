@@ -76,6 +76,35 @@
   -webkit-backdrop-filter: none;
 }
 
+/*
+ * Widget acrylic mode, on a window Windows is already filling with the acrylic material: the
+ * card only adds the faint tint and the edge that sit on top of it, so the blurred desktop
+ * behind stays visible through the whole bar.
+ */
+.acrylic-sheet {
+  /* A dark scrim, not a highlight: the material alone is too light behind the widget's own text. */
+  background: linear-gradient(180deg, rgba(20, 20, 20, 0.42), rgba(12, 12, 12, 0.52));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 8px;
+}
+
+/*
+ * Same mode without a system backdrop to sit on. The window is transparent, so backdrop-filter
+ * has nothing to sample and the glass has to be faked: a dark translucent fill that still lets
+ * the wallpaper through, with a lit edge to keep the card readable against anything behind it.
+ */
+.acrylic-glass {
+  background: linear-gradient(180deg, rgba(32, 32, 32, 0.62), rgba(18, 18, 18, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 8px;
+}
+
 .drag {
   -webkit-app-region: drag;
 }

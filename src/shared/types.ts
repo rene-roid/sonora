@@ -206,6 +206,26 @@ export const WIDGET_ANCHORS: { value: WidgetAnchor; label: string }[] = [
   { value: 'bottom-right', label: 'Bottom right' }
 ]
 
+/**
+ * How the widget's card is filled. `solid` is an opaque panel dimmed by `opacity`; `acrylic` is
+ * the blurred system backdrop, so whatever sits behind the widget shows through it.
+ */
+export type WidgetBackground = 'solid' | 'acrylic'
+
+export const WIDGET_BACKGROUNDS: { value: WidgetBackground; label: string; hint: string }[] = [
+  { value: 'solid', label: 'Solid', hint: 'An opaque card, dimmed to the opacity you pick' },
+  { value: 'acrylic', label: 'Acrylic', hint: 'Frosted glass that blurs whatever sits behind it' }
+]
+
+/**
+ * Windows 11 22H2 is the first build that can draw the acrylic system backdrop behind a window.
+ * Everywhere else acrylic mode falls back to a translucent glass card with no blur, since a
+ * transparent window gives `backdrop-filter` nothing to sample.
+ */
+export function supportsNativeAcrylic(platform: string, release: string): boolean {
+  return platform === 'win32' && Number(release.split('.')[2] ?? 0) >= 22621
+}
+
 /** Layout and chrome of the taskbar widget. Main sizes and places the window from these. */
 export interface WidgetOptions {
   anchor: WidgetAnchor
@@ -217,8 +237,15 @@ export interface WidgetOptions {
   cover: boolean
   /** `1:23 / 4:56` next to the transport buttons. */
   elapsed: boolean
+  background: WidgetBackground
   /** Whole-widget opacity, 0.35 to 1. */
   opacity: number
+  /** Fade the widget down to `hoverOpacity` while the pointer is over it, to see past it. */
+  fadeOnHover: boolean
+  /** Opacity while hovered, 0.05 to 1. Only ever dims further than `opacity`, never brighter. */
+  hoverOpacity: number
+  /** Let clicks fall through to whatever is behind the widget, except on its own controls. */
+  clickThrough: boolean
 }
 
 export const defaultWidgetOptions: WidgetOptions = {
@@ -228,7 +255,19 @@ export const defaultWidgetOptions: WidgetOptions = {
   progress: true,
   cover: true,
   elapsed: false,
-  opacity: 1
+  background: 'solid',
+  opacity: 1,
+  fadeOnHover: false,
+  hoverOpacity: 0.35,
+  clickThrough: false
+}
+
+/**
+ * Opacity the widget should be showing right now. Hovering only ever dims further, so a hover
+ * level left above the resting one cannot make the widget brighter than the user asked for.
+ */
+export function widgetOpacity(o: WidgetOptions, hovering: boolean): number {
+  return o.fadeOnHover && hovering ? Math.min(o.opacity, o.hoverOpacity) : o.opacity
 }
 
 /**

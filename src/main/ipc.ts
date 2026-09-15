@@ -27,6 +27,7 @@ import {
   getWindow,
   positionToast,
   positionWidget,
+  refreshWidgetSurface,
   setWidgetEnabled,
   showMainWindow,
   windowNameOf
@@ -220,8 +221,10 @@ export function setupIpc(): void {
         setWidgetEnabled('widget', patch.widgets.taskbar)
       }
     }
-    // The anchor and the layout options both change where the widget window belongs.
+    // The anchor and the layout options both change where the widget window belongs, and the
+    // background mode decides which kind of window it has to be in the first place.
     if (patch.widget) {
+      refreshWidgetSurface()
       positionWidget()
       positionToast()
     }
@@ -284,6 +287,7 @@ export function setupIpc(): void {
     const win = name ? getWindow(name) : undefined
     win?.setIgnoreMouseEvents(ignore, { forward: true })
   })
+
 
   ipcMain.handle('app:info', () => ({ version: app.getVersion(), platform: process.platform }))
   ipcMain.on('app:openExternal', (_e, url: string) => {
