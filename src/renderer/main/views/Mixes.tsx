@@ -2,7 +2,7 @@ import type { MixKind } from '@shared/types'
 import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { Tile, TileGrid } from '../components/AlbumCard'
-import { TagArt } from '../components/TagArt'
+import { TagArt, TagArtCover } from '../components/TagArt'
 import { TrackPage } from '../components/TrackPage'
 import { SectionHeader } from '../components/ui'
 import { buildMix, mixSeeds, type MixSeed } from '../mixes'
@@ -54,5 +54,13 @@ export function MixView({ value, kind = 'genre' }: { value: string; kind?: MixKi
     () => (client ? buildMix(client, seed) : undefined),
     [client, kind, value]
   )
-  return <TrackPage eyebrow={mixLabel(seed)} title={mixTitle(seed)} state={state} origin={mixRecent(seed)} />
+  return (
+    <TrackPage
+      eyebrow={mixLabel(seed)}
+      title={mixTitle(seed)}
+      state={state}
+      origin={mixRecent(seed)}
+      cover={<TagArtCover art={{ style: 'mix', seed }} name={mixTitle(seed)} />}
+    />
+  )
 }

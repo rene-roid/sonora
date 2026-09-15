@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Play, Shuffle } from 'lucide-react'
 import type { RecentItem, Track } from '@shared/types'
 import { filterTracks, formatDuration } from '@shared/format'
@@ -13,13 +13,16 @@ export function TrackPage({
   eyebrow,
   title,
   state,
-  origin
+  origin,
+  cover
 }: {
   eyebrow: string
   title: string
   state: AsyncState<Track[]>
   /** This page, for Home's shelf: playing anything here counts as playing the genre or mix. */
   origin: RecentItem
+  /** Artwork beside the heading, the same picture the tile that led here was wearing. */
+  cover?: ReactNode
 }) {
   const [query, setQuery] = useState('')
   const songs = state.data
@@ -35,6 +38,7 @@ export function TrackPage({
       <PageTitle
         eyebrow={eyebrow}
         title={title}
+        cover={cover}
         subtitle={`${songs.length} song${songs.length === 1 ? '' : 's'}, ${formatDuration(total)}`}
         actions={
           <>
