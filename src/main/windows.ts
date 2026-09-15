@@ -2,15 +2,16 @@ import { BrowserWindow, app, nativeImage, screen, shell, type BrowserWindowConst
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { is } from '@electron-toolkit/utils'
-import type { Rect, WindowName } from '@shared/types'
+import { widgetSize, type Rect, type WindowName } from '@shared/types'
 import { getSettings, updateSettings } from './store'
 
 const windows = new Map<WindowName, BrowserWindow>()
 
-export const WIDGET_SIZE = { width: 340, height: 76 }
 export const MINI_SIZE = { width: 340, height: 112 }
 export const TOAST_SIZE = { width: 380, height: 112 }
 const EDGE = 12
+/** The widget sits closer to the screen edge than the floating windows so it hugs the taskbar. */
+const WIDGET_EDGE = 6
 
 /** Windows/Linux: tool windows are skipped by the taskbar, alt-tab and window lists. */
 const OVERLAY_TYPE = process.platform === 'darwin' ? {} : ({ type: 'toolbar' } as const)
@@ -193,11 +194,14 @@ export function positionToast(): void {
   const win = getWindow('toast')
   if (!win) return
   const a = workArea()
+  const x = a.x + a.width - TOAST_SIZE.width - EDGE
   const widget = getWindow('widget')
-  const lift = widget && widget.isVisible() ? WIDGET_SIZE.height + 8 : 0
+  // Only step over the widget when it actually sits under the toast's bottom-right slot.
+  const w = widget?.isVisible() ? widgetBounds() : undefined
+  const overlaps = w && w.y + w.height > a.y + a.height - TOAST_SIZE.height - EDGE && w.x + w.width > x
   win.setBounds({
-    x: a.x + a.width - TOAST_SIZE.width - EDGE,
-    y: a.y + a.height - TOAST_SIZE.height - EDGE - lift,
+    x,
+    y: a.y + a.height - TOAST_SIZE.height - EDGE - (overlaps ? w.height + 8 : 0),
     ...TOAST_SIZE
   })
 }
@@ -235,13 +239,10 @@ export function createMiniWindow(): BrowserWindow {
 export function createWidgetWindow(): BrowserWindow {
   const existing = getWindow('widget')
   if (existing) return existing
-  const a = workArea()
   const win = new BrowserWindow({
     ...baseOptions('widget'),
-    ...WIDGET_SIZE,
+    ...widgetBounds(),
     ...OVERLAY_TYPE,
-    x: a.x + a.width - WIDGET_SIZE.width - EDGE,
-    y: a.y + a.height - WIDGET_SIZE.height - 6,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -263,16 +264,31 @@ export function createWidgetWindow(): BrowserWindow {
   return win
 }
 
-/** Keep the taskbar widget glued to the bottom-right of the work area when displays change. */
+/** Where the taskbar widget belongs right now, from its anchor and its layout options. */
+export function widgetBounds(): Rect {
+  const a = workArea()
+  const o = getSettings().widget
+  const { width, height } = widgetSize(o)
+  const [edge, side] = o.anchor.split('-')
+  const x =
+    side === 'left'
+      ? a.x + EDGE
+      : side === 'center'
+        ? a.x + Math.round((a.width - width) / 2)
+        : a.x + a.width - width - EDGE
+  const y = edge === 'top' ? a.y + WIDGET_EDGE : a.y + a.height - height - WIDGET_EDGE
+  return { x, y, width, height }
+}
+
+/** Re-anchor and re-size the taskbar widget after a settings change or a display change. */
 export function positionWidget(): void {
   const win = getWindow('widget')
   if (!win) return
-  const a = workArea()
-  win.setBounds({
-    x: a.x + a.width - WIDGET_SIZE.width - EDGE,
-    y: a.y + a.height - WIDGET_SIZE.height - 6,
-    ...WIDGET_SIZE
-  })
+  // Windows pins maximumSize to the current size while a window is non-resizable, so a
+  // compact-mode size change is rejected unless resizing is briefly allowed.
+  win.setResizable(true)
+  win.setBounds(widgetBounds())
+  win.setResizable(false)
 }
 
 export function setWidgetEnabled(name: 'mini' | 'widget', enabled: boolean): void {

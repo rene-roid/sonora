@@ -7,7 +7,8 @@ import {
   type PlayerEvents,
   type PlayerState,
   type Session,
-  type Settings
+  type Settings,
+  type SettingsPatch
 } from '@shared/types'
 import {
   SubsonicClient,
@@ -25,6 +26,7 @@ import {
   broadcast,
   getWindow,
   positionToast,
+  positionWidget,
   setWidgetEnabled,
   showMainWindow,
   windowNameOf
@@ -207,7 +209,7 @@ export function setupIpc(): void {
 
   // ---- settings ------------------------------------------------------------
   ipcMain.handle('settings:get', (): Settings => getSettings())
-  ipcMain.handle('settings:update', (_e, patch: Partial<Settings>): Settings => {
+  ipcMain.handle('settings:update', (_e, patch: SettingsPatch): Settings => {
     const before = getSettings()
     const next = updateSettings(patch)
     if (patch.widgets) {
@@ -217,6 +219,11 @@ export function setupIpc(): void {
       if (patch.widgets.taskbar !== undefined && patch.widgets.taskbar !== before.widgets.taskbar) {
         setWidgetEnabled('widget', patch.widgets.taskbar)
       }
+    }
+    // The anchor and the layout options both change where the widget window belongs.
+    if (patch.widget) {
+      positionWidget()
+      positionToast()
     }
     if (patch.autoLaunch !== undefined) {
       setAutoLaunch(patch.autoLaunch)

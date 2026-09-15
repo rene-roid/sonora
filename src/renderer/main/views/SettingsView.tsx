@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import type { NormalizeMode, Session, Settings } from '@shared/types'
+import type { NormalizeMode, Session, Settings, SettingsPatch, WidgetAnchor, WidgetOptions } from '@shared/types'
+import { WIDGET_ANCHORS } from '@shared/types'
 import type { ServerProbe } from '@shared/subsonic/client'
 import { useSessionStore, useSettings } from '@renderer/shared/sessionStore'
 import { GhostButton, PageTitle, SectionHeader, Spinner } from '../components/ui'
@@ -145,6 +146,97 @@ function Toggle({
   )
 }
 
+/**
+ * The work area as a 3x2 grid of slots, each drawn as the little bar the widget will become.
+ * Reads faster than a dropdown, since the choice is about a place on screen.
+ */
+function AnchorPicker({ value, onChange }: { value: WidgetAnchor; onChange: (v: WidgetAnchor) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-6 rounded-md px-3 py-3">
+      <div>
+        <div className="text-sm font-medium">Position</div>
+        <div className="text-xs text-ink-2">
+          {WIDGET_ANCHORS.find((a) => a.value === value)?.label} of the screen, clear of the taskbar.
+        </div>
+      </div>
+      <div className="grid h-[76px] w-[132px] shrink-0 grid-cols-3 grid-rows-2 gap-1 rounded-md border border-white/10 bg-black/40 p-1">
+        {WIDGET_ANCHORS.map((a) => {
+          const active = a.value === value
+          return (
+            <button
+              key={a.value}
+              title={a.label}
+              aria-label={a.label}
+              aria-pressed={active}
+              onClick={() => onChange(a.value)}
+              className={`flex items-center justify-center rounded-sm transition ${
+                active ? 'bg-accent/20' : 'hover:bg-white/10'
+              }`}
+            >
+              <span className={`h-1.5 w-7 rounded-full ${active ? 'bg-accent' : 'bg-white/25'}`} />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Everything about the taskbar widget except whether it is shown at all. */
+function TaskbarWidgetSettings({ value, onChange }: { value: WidgetOptions; onChange: (p: Partial<WidgetOptions>) => void }) {
+  return (
+    <section className="mb-8">
+      <SectionHeader title="Taskbar widget" />
+      <AnchorPicker value={value.anchor} onChange={(anchor) => onChange({ anchor })} />
+      <Toggle
+        label="Compact view"
+        description="A shorter bar with just the title, for when it should stay out of the way"
+        checked={value.compact}
+        onChange={(compact) => onChange({ compact })}
+      />
+      <Toggle
+        label="Audio visualiser"
+        description="Live frequency bars behind the track details"
+        checked={value.visualizer}
+        onChange={(visualizer) => onChange({ visualizer })}
+      />
+      <Toggle
+        label="Album art"
+        description="Cover thumbnail on the left; click it to open Sonora"
+        checked={value.cover}
+        onChange={(cover) => onChange({ cover })}
+      />
+      <Toggle
+        label="Progress bar"
+        description="Thin line along the bottom edge showing how far into the track you are"
+        checked={value.progress}
+        onChange={(progress) => onChange({ progress })}
+      />
+      <Toggle
+        label="Elapsed time"
+        description="Show the position and length next to the controls"
+        checked={value.elapsed}
+        onChange={(elapsed) => onChange({ elapsed })}
+      />
+      <label className="flex items-center justify-between gap-6 px-3 py-3">
+        <div>
+          <div className="text-sm font-medium">Opacity</div>
+          <div className="text-xs text-ink-2">{Math.round(value.opacity * 100)}%</div>
+        </div>
+        <input
+          type="range"
+          className="range w-40"
+          min={35}
+          max={100}
+          step={5}
+          value={Math.round(value.opacity * 100)}
+          onChange={(e) => onChange({ opacity: Number(e.target.value) / 100 })}
+        />
+      </label>
+    </section>
+  )
+}
+
 const NORMALIZE_MODES: { value: NormalizeMode; label: string }[] = [
   { value: 'off', label: 'Off' },
   { value: 'album', label: 'Per album' },
@@ -235,7 +327,7 @@ export function SettingsView() {
     void window.sonora.app.info().then(setInfo)
   }, [])
 
-  const update = (patch: Partial<Settings>): void => {
+  const update = (patch: SettingsPatch): void => {
     void window.sonora.settings.update(patch)
   }
   const widget = (key: keyof Settings['widgets'], value: boolean): void =>
@@ -249,7 +341,7 @@ export function SettingsView() {
         <SectionHeader title="Widgets" />
         <Toggle
           label="Taskbar widget"
-          description="Compact controls and audio visualiser pinned above the taskbar, next to the system tray"
+          description="Controls and an audio visualiser pinned to an edge of the screen, clear of the taskbar"
           checked={settings.widgets.taskbar}
           onChange={(v) => widget('taskbar', v)}
         />
@@ -281,6 +373,10 @@ export function SettingsView() {
           />
         </label>
       </section>
+
+      {settings.widgets.taskbar && (
+        <TaskbarWidgetSettings value={settings.widget} onChange={(patch) => update({ widget: patch })} />
+      )}
 
       <section className="mb-8">
         <SectionHeader title="Playback" />

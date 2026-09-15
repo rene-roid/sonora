@@ -188,8 +188,64 @@ export interface Rect {
   height: number
 }
 
+/** Corner or edge of the work area the taskbar widget is glued to. */
+export type WidgetAnchor =
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right'
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+
+export const WIDGET_ANCHORS: { value: WidgetAnchor; label: string }[] = [
+  { value: 'top-left', label: 'Top left' },
+  { value: 'top-center', label: 'Top centre' },
+  { value: 'top-right', label: 'Top right' },
+  { value: 'bottom-left', label: 'Bottom left' },
+  { value: 'bottom-center', label: 'Bottom centre' },
+  { value: 'bottom-right', label: 'Bottom right' }
+]
+
+/** Layout and chrome of the taskbar widget. Main sizes and places the window from these. */
+export interface WidgetOptions {
+  anchor: WidgetAnchor
+  /** Shorter bar with the artist line dropped. */
+  compact: boolean
+  visualizer: boolean
+  /** Thin accent progress line along the bottom edge. */
+  progress: boolean
+  cover: boolean
+  /** `1:23 / 4:56` next to the transport buttons. */
+  elapsed: boolean
+  /** Whole-widget opacity, 0.35 to 1. */
+  opacity: number
+}
+
+export const defaultWidgetOptions: WidgetOptions = {
+  anchor: 'bottom-right',
+  compact: false,
+  visualizer: true,
+  progress: true,
+  cover: true,
+  elapsed: false,
+  opacity: 1
+}
+
+/**
+ * Footprint of the taskbar widget for a given set of options. Lives here so the main process
+ * can size the window and the renderer can lay out to exactly the same box. The deltas are the
+ * content widths in `widget/main.tsx`, each with the flex gap that goes away with it.
+ */
+export function widgetSize(o: WidgetOptions): { width: number; height: number } {
+  const c = o.compact
+  const width = (c ? 288 : 340) - (o.cover ? 0 : c ? 44 : 64) + (o.elapsed ? (c ? 72 : 74) : 0)
+  return { width, height: c ? 52 : 76 }
+}
+
 export interface Settings {
   widgets: { mini: boolean; taskbar: boolean; toast: boolean }
+  /** Position and chrome of the taskbar widget; `widgets.taskbar` decides whether it is shown. */
+  widget: WidgetOptions
   volume: number
   muted: boolean
   repeat: RepeatMode
@@ -211,6 +267,7 @@ export interface Settings {
 
 export const defaultSettings: Settings = {
   widgets: { mini: false, taskbar: true, toast: true },
+  widget: defaultWidgetOptions,
   volume: 0.8,
   muted: false,
   repeat: 'off',
@@ -224,6 +281,15 @@ export const defaultSettings: Settings = {
   resume: null,
   recents: [],
   cacheMaxGb: 5
+}
+
+/**
+ * What a caller may hand to `settings.update`. The two nested groups merge field by field,
+ * so a window can flip one option without having to echo back the rest.
+ */
+export type SettingsPatch = Partial<Omit<Settings, 'widget' | 'widgets'>> & {
+  widget?: Partial<WidgetOptions>
+  widgets?: Partial<Settings['widgets']>
 }
 
 export interface LyricLine {

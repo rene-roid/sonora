@@ -7,6 +7,7 @@ import type {
   PlayerState,
   Session,
   Settings,
+  SettingsPatch,
   Track,
   WindowName
 } from '@shared/types'
@@ -91,7 +92,7 @@ const api = {
     get(): Promise<Settings> {
       return ipcRenderer.invoke('settings:get')
     },
-    update(patch: Partial<Settings>): Promise<Settings> {
+    update(patch: SettingsPatch): Promise<Settings> {
       return ipcRenderer.invoke('settings:update', patch)
     },
     onChange(cb: (settings: Settings) => void): Unsubscribe {

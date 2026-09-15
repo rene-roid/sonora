@@ -12,8 +12,8 @@ function MiniPlayer() {
   const pct = duration > 0 ? (position / duration) * 100 : 0
 
   return (
-    <div className="h-full w-full p-1.5">
-      <div className="acrylic drag relative flex h-full w-full items-center gap-3 p-2.5 pr-3">
+    <div className="h-full w-full">
+      <div className="acrylic acrylic-flat drag relative flex h-full w-full items-center gap-3 p-2.5 pr-3">
         <Cover id={track?.coverArt} size={200} className="h-[84px] w-[84px]" />
         <div className="flex min-w-0 flex-1 flex-col justify-between self-stretch">
           <div className="min-w-0 pr-12">
@@ -43,7 +43,7 @@ function MiniPlayer() {
           <button
             className="icon-btn h-6 w-6"
             title="Close mini player"
-            onClick={() => void window.sonora.settings.update({ widgets: { mini: false } as never })}
+            onClick={() => void window.sonora.settings.update({ widgets: { mini: false } })}
           >
             <X size={13} />
           </button>
