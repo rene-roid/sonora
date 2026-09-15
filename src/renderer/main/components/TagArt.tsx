@@ -134,3 +134,15 @@ export function TagArt({ art, name }: { art: ArtRef; name: string }) {
     </div>
   )
 }
+
+/**
+ * The same background at the size an album cover gets, for the top of the page a tile leads to.
+ * Opening a mood, genre or mix should land on the picture that was clicked, not a bare heading.
+ */
+export function TagArtCover({ art, name }: { art: ArtRef; name: string }) {
+  return (
+    <div className="h-52 w-52 shrink-0 overflow-hidden rounded-md shadow-2xl">
+      <TagArt art={art} name={name} />
+    </div>
+  )
+}

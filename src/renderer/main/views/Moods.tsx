@@ -5,7 +5,7 @@ import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
 import { AlbumCard, CardGrid, TagCard } from '../components/AlbumCard'
-import { TagArt } from '../components/TagArt'
+import { TagArt, TagArtCover } from '../components/TagArt'
 import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
 import { nav } from '../nav'
 import { recentOf, playFrom } from '../recents'
@@ -89,6 +89,7 @@ export function MoodView({ value }: { value: string }) {
       <PageTitle
         eyebrow="Mood"
         title={capitalize(value)}
+        cover={<TagArtCover art={{ style: 'mood', seed: { kind: 'mood', value } }} name={capitalize(value)} />}
         subtitle={`${albums.length} album${albums.length === 1 ? '' : 's'}`}
         actions={
           <>

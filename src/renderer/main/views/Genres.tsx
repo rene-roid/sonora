@@ -4,7 +4,7 @@ import type { Genre } from '@shared/subsonic/types'
 import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { CardGrid, TagCard } from '../components/AlbumCard'
-import { TagArt } from '../components/TagArt'
+import { TagArt, TagArtCover } from '../components/TagArt'
 import { TrackPage } from '../components/TrackPage'
 import { Empty, ErrorBox, Loading, PageTitle, SearchInput } from '../components/ui'
 import { nav } from '../nav'
@@ -66,5 +66,13 @@ export function Genres() {
 export function GenreView({ value }: { value: string }) {
   const client = useClient()
   const state = useAsync(`genre:${value}`, () => client?.getSongsByGenre(value), [client, value])
-  return <TrackPage eyebrow="Genre" title={capitalize(value)} state={state} origin={genreRecent(value)} />
+  return (
+    <TrackPage
+      eyebrow="Genre"
+      title={capitalize(value)}
+      state={state}
+      origin={genreRecent(value)}
+      cover={<TagArtCover art={{ style: 'genre', seed: { kind: 'genre', value } }} name={capitalize(value)} />}
+    />
+  )
 }
