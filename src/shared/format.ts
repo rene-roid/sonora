@@ -27,10 +27,15 @@ export function filterTracks<T extends { title: string; artist: string; album: s
   return tracks.filter((t) => `${t.title} ${t.artist} ${t.album}`.toLowerCase().includes(q))
 }
 
-/** Genre wording that marks an album as a soundtrack. Tweak here if a library tags them differently. */
+/** Wording that marks an album as a soundtrack, whether it shows up in the genre tag or the title. */
 const SOUNDTRACK = /sound\s?track|\bost\b|original score|motion picture|\bscore\b/i
 
-export const isSoundtrack = (genre?: string): boolean => SOUNDTRACK.test(genre ?? '')
+/**
+ * Genre tags rarely say "soundtrack" once a library is tagged by musical style (jazz, j-pop, ...),
+ * so the album title is checked too - that's usually where "(Original Soundtrack)" actually lives.
+ */
+export const isSoundtrack = (genre?: string, name?: string): boolean =>
+  SOUNDTRACK.test(genre ?? '') || SOUNDTRACK.test(name ?? '')
 
 /** "Halo 2 OST (Disc 2)" / "FFX OST CD2" -> { base: "Halo 2 OST", disc: 2 }. Volumes are separate releases, not discs. */
 const DISC_SUFFIX = /[\s,([-]*\b(?:disc|disk|cd)\s*\.?\s*(\d{1,2})\b\s*[)\]]*\s*$/i

@@ -18,6 +18,7 @@ import {
   probeServers,
   type ServerProbe
 } from '@shared/subsonic/client'
+import * as artCache from './artCache'
 import * as audioCache from './audioCache'
 import { setAutoLaunch } from './autolaunch'
 import { clearSession, loadSession, saveSession } from './credentials'
@@ -171,6 +172,7 @@ export function setupIpc(): void {
       const previous = loadSession()
       if (previous?.username !== session.username || previous.server !== session.server) {
         broadcast('settings:changed', [updateSettings({ recents: [] })])
+        void artCache.clear() // the picked backgrounds belong to the account that left
       }
       saveSession(session)
       broadcast('auth:changed', [session])
@@ -206,6 +208,7 @@ export function setupIpc(): void {
   ipcMain.handle('auth:logout', () => {
     clearSession()
     broadcast('settings:changed', [updateSettings({ recents: [] })])
+    void artCache.clear()
     sendCommand('stop')
     broadcast('auth:changed', [null])
   })

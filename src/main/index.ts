@@ -1,5 +1,6 @@
 import { app, BrowserWindow, globalShortcut, nativeTheme, screen, session } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
+import { registerArtProtocol, registerArtScheme } from './artCache'
 import { setupIpc, setPlayerHooks, sendCommand, playerState } from './ipc'
 import { getSettings, onSettingsChange, updateSettings } from './store'
 import { sanitizeResume } from '@shared/types'
@@ -17,6 +18,9 @@ import {
 } from './windows'
 
 let quitting = false
+
+// Has to happen before the app is ready, so every window can load `sonora-art://` cover images.
+registerArtScheme()
 
 // Only one Sonora at a time; a second launch focuses the existing main window.
 if (!app.requestSingleInstanceLock()) {
@@ -79,6 +83,7 @@ app.whenReady().then(() => {
   })
 
   installCorsShim()
+  registerArtProtocol()
   setupIpc()
 
   const settings = getSettings()

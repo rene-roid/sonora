@@ -4,6 +4,7 @@ import type { Genre } from '@shared/subsonic/types'
 import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { CardGrid, TagCard } from '../components/AlbumCard'
+import { TagArt } from '../components/TagArt'
 import { TrackPage } from '../components/TrackPage'
 import { Empty, ErrorBox, Loading, PageTitle, SearchInput } from '../components/ui'
 import { nav } from '../nav'
@@ -14,6 +15,7 @@ const genreRecent = (value: string) => recentOf({ name: 'genre', value }, capita
 
 function GenreCard({ genre }: { genre: Genre }) {
   const client = useClient()
+  const name = capitalize(genre.value)
   const play = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
     const songs = await client?.getSongsByGenre(genre.value)
@@ -21,8 +23,9 @@ function GenreCard({ genre }: { genre: Genre }) {
   }
   return (
     <TagCard
-      name={capitalize(genre.value)}
+      name={name}
       subtitle={`${genre.songCount ?? 0} song${genre.songCount === 1 ? '' : 's'}`}
+      art={<TagArt art={{ style: 'genre', seed: { kind: 'genre', value: genre.value } }} name={name} />}
       onClick={() => nav.go({ name: 'genre', value: genre.value })}
       action={
         <button

@@ -132,6 +132,12 @@ export function sanitizeResume(r: ResumeState | null | undefined): ResumeState |
   return { queue: r.queue, index, position }
 }
 
+/**
+ * What a mix is seeded from: a genre tag, a mood tag, or one artist the mix is built around.
+ * Optional on a View because mixes were genre-only at first, so a missing kind means `genre`.
+ */
+export type MixKind = 'genre' | 'mood' | 'artist'
+
 /** Every navigable page of the main window. Lives here because `recents` persists it. */
 export type View =
   | { name: 'home' }
@@ -142,7 +148,7 @@ export type View =
   | { name: 'genre'; value: string }
   | { name: 'moods' }
   | { name: 'mood'; value: string }
-  | { name: 'mix'; value: string }
+  | { name: 'mix'; value: string; kind?: MixKind }
   | { name: 'artist'; id: string }
   /** `discIds` are sibling albums holding the other discs of the same release, in disc order. */
   | { name: 'album'; id: string; discIds?: string[] }
@@ -153,6 +159,8 @@ export type View =
 
 /** Identity of a view, for deduping the shelf. */
 export function viewKey(v: View): string {
+  // Mixes carry their kind, so a "Rock" genre mix and a "Rock" mood mix stay separate entries.
+  if (v.name === 'mix') return `mix:${v.kind ?? 'genre'}:${v.value}`
   return 'id' in v ? `${v.name}:${v.id}` : 'value' in v ? `${v.name}:${v.value}` : v.name
 }
 
@@ -334,6 +342,8 @@ export interface Settings {
   recents: RecentItem[]
   /** Disk budget for cached songs, in GB. 0 turns caching off. */
   cacheMaxGb: number
+  /** Also match soundtrack wording in the album title, not just the genre tag. */
+  soundtrackTitleMatch: boolean
 }
 
 export const defaultSettings: Settings = {
@@ -353,7 +363,8 @@ export const defaultSettings: Settings = {
   windowBounds: {},
   resume: null,
   recents: [],
-  cacheMaxGb: 5
+  cacheMaxGb: 5,
+  soundtrackTitleMatch: true
 }
 
 /**

@@ -5,6 +5,7 @@ import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
 import { AlbumCard, CardGrid, TagCard } from '../components/AlbumCard'
+import { TagArt } from '../components/TagArt'
 import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
 import { nav } from '../nav'
 import { recentOf, playFrom } from '../recents'
@@ -51,6 +52,7 @@ export function Moods() {
             key={mood}
             name={capitalize(mood)}
             subtitle={`${count} album${count === 1 ? '' : 's'}`}
+            art={<TagArt art={{ style: 'mood', seed: { kind: 'mood', value: mood } }} name={capitalize(mood)} />}
             onClick={() => nav.go({ name: 'mood', value: mood })}
           />
         ))}

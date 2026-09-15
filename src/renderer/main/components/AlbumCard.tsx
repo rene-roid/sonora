@@ -76,21 +76,27 @@ export function TagCard({
   name,
   subtitle,
   onClick,
+  art,
   action
 }: {
   name: string
   subtitle: string
   onClick: () => void
+  /** Background layer, filling the card behind the label. Falls back to the plain colour block. */
+  art?: React.ReactNode
   action?: React.ReactNode
 }) {
   return (
     <div
-      className="group relative cursor-pointer overflow-hidden rounded-lg p-4 transition hover:brightness-110"
+      className="group relative flex aspect-5/4 cursor-pointer flex-col justify-end overflow-hidden rounded-lg p-4 transition hover:brightness-110"
       style={{ background: gradient(name) }}
       onClick={onClick}
     >
-      <div className="text-base font-bold break-words">{name}</div>
-      <div className="mt-1 text-xs text-white/70">{subtitle}</div>
+      {art && <div className="absolute inset-0">{art}</div>}
+      <div className="relative pr-12">
+        <div className="line-clamp-2 text-base font-bold break-words drop-shadow-md">{name}</div>
+        <div className="mt-1 truncate text-xs text-white/75">{subtitle}</div>
+      </div>
       {action}
     </div>
   )

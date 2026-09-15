@@ -1,18 +1,22 @@
 import { useMemo, useState } from 'react'
 import { groupDiscs, isSoundtrack, parseDiscName } from '@shared/format'
-import { useClient } from '@renderer/shared/sessionStore'
+import { useClient, useSettings } from '@renderer/shared/sessionStore'
 import { AlbumCard, CardGrid } from '../components/AlbumCard'
 import { Empty, ErrorBox, Loading, PageTitle, SearchInput } from '../components/ui'
 import { useAsync } from '../useAsync'
 
 export function Soundtracks() {
   const client = useClient()
+  const titleMatch = useSettings().soundtrackTitleMatch
   // Shares the album-list cache with Moods, so this costs nothing extra after either view has loaded.
   const state = useAsync('albums:all', () => client?.getAllAlbums(), [client])
   const [query, setQuery] = useState('')
 
   // Discs of the same release collapse into one card; the card opens all of them as one album.
-  const albums = useMemo(() => groupDiscs((state.data ?? []).filter((a) => isSoundtrack(a.genre))), [state.data])
+  const albums = useMemo(
+    () => groupDiscs((state.data ?? []).filter((a) => isSoundtrack(a.genre, titleMatch ? a.name : undefined))),
+    [state.data, titleMatch]
+  )
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return albums
