@@ -24,14 +24,25 @@ const engine = new AudioEngine((event, payload) => {
     log(t ? `▶ ${t.title} · ${t.artist}` : '■ stopped')
   } else if (event === 'error') {
     log(`⚠ ${(payload as { message: string }).message}`)
-  } else if (event === 'positionUpdate') {
-    const p = payload as { position: number; duration: number }
-    logEl.dataset['pos'] = `${p.position.toFixed(1)}/${p.duration.toFixed(1)}`
   }
 })
 
+/**
+ * A command's payload, short enough for the log line. Serialising the whole thing to then keep
+ * eighty characters of it would walk every track of a queue that can run to thousands, on the
+ * same tick the queue is being handed to the engine.
+ */
+function describe(payload: unknown): string {
+  if (payload === undefined || payload === null) return ''
+  const p = payload as Record<string, unknown>
+  const tracks = Array.isArray(p['tracks']) ? (p['tracks'] as unknown[]).length : undefined
+  if (tracks !== undefined) return ` ${tracks} track${tracks === 1 ? '' : 's'}`
+  const parts = Object.entries(p).map(([k, v]) => `${k}=${typeof v === 'object' ? '…' : String(v)}`)
+  return parts.length ? ` ${parts.join(' ').slice(0, 80)}` : ''
+}
+
 host.onCommand((cmd, payload) => {
-  log(`cmd ${cmd}${payload ? ' ' + JSON.stringify(payload).slice(0, 80) : ''}`)
+  log(`cmd ${cmd}${describe(payload)}`)
   engine.handle(cmd, payload)
 })
 

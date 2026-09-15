@@ -23,11 +23,19 @@ export function Visualizer({
   const playing = usePlayerState((s) => s.playing)
   const playingRef = useRef(playing)
   playingRef.current = playing
+  /** Starts the draw loop if it has idled. Installed by the effect that owns the loop. */
+  const wake = useRef<() => void>(() => {})
 
   useEffect(() => {
     target.current = new Float32Array(bars)
     current.current = new Float32Array(bars)
+    wake.current()
   }, [bars])
+
+  // Pausing stops the frames, so the decay to the floor needs waking on its own.
+  useEffect(() => {
+    wake.current()
+  }, [playing])
 
   useEffect(() => {
     window.sonora.player.wantFrames(true)
@@ -42,6 +50,7 @@ export function Visualizer({
         for (let j = start; j < end; j++) acc += bins[j]
         t[i] = acc / (end - start) / 255
       }
+      wake.current()
     })
     return () => {
       off()
@@ -59,22 +68,33 @@ export function Visualizer({
       const dpr = window.devicePixelRatio || 1
       canvas.width = Math.round(canvas.clientWidth * dpr)
       canvas.height = Math.round(canvas.clientHeight * dpr)
+      wake.current()
     })
     ro.observe(canvas)
 
+    /**
+     * The loop runs only while there is motion left to draw. Paused audio decays the bars to
+     * their floor and then stops; the next frame off the host starts it again. Without this the
+     * widget would hold a display-rate redraw open for as long as it is on screen, which for a
+     * window that sits above the taskbar all day is most of the day.
+     */
     const draw = (): void => {
-      raf = requestAnimationFrame(draw)
       const w = canvas.width
       const h = canvas.height
-      if (!w || !h) return
+      if (!w || !h) {
+        raf = 0
+        return
+      }
       const t = target.current
       const c = current.current
       const n = c.length
       const decaying = !playingRef.current
+      let moving = false
       for (let i = 0; i < n; i++) {
         const goal = decaying ? 0 : t[i]
         const rate = goal > c[i] ? 0.45 : 0.12
         c[i] += (goal - c[i]) * rate
+        if (Math.abs(goal - c[i]) > 0.002) moving = true
       }
       ctx.clearRect(0, 0, w, h)
       const gap = Math.max(1, w / n / 4)
@@ -89,10 +109,17 @@ export function Visualizer({
         roundRect(ctx, x, y, bw, bh, Math.min(bw / 2, 3))
       }
       ctx.globalAlpha = 1
+      raf = moving ? requestAnimationFrame(draw) : 0
     }
-    raf = requestAnimationFrame(draw)
+
+    wake.current = () => {
+      if (!raf) raf = requestAnimationFrame(draw)
+    }
+    wake.current()
     return () => {
       cancelAnimationFrame(raf)
+      raf = 0
+      wake.current = () => {}
       ro.disconnect()
     }
   }, [color, mirror])

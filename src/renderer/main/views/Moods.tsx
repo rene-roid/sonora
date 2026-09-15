@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Play, Shuffle } from 'lucide-react'
 import type { AlbumID3 } from '@shared/subsonic/types'
 import { capitalize } from '@shared/format'
+import { mapLimit } from '@shared/async'
 import { useClient } from '@renderer/shared/sessionStore'
 import { player } from '@renderer/shared/playerStore'
 import { AlbumCard, CardGrid, TagCard } from '../components/AlbumCard'
@@ -9,6 +10,7 @@ import { TagArt } from '../components/TagArt'
 import { Empty, ErrorBox, GhostButton, Loading, PageTitle, PrimaryButton, SearchInput } from '../components/ui'
 import { nav } from '../nav'
 import { recentOf, playFrom } from '../recents'
+import { ALBUM_FETCH_LIMIT } from '../mixes'
 import { useAsync, type AsyncState } from '../useAsync'
 
 /**
@@ -75,7 +77,7 @@ export function MoodView({ value }: { value: string }) {
 
   const playAll = async (shuffle: boolean): Promise<void> => {
     if (!client) return
-    const songs = (await Promise.all(albums.map((a) => client.getAlbum(a.id)))).flatMap((a) => a.song)
+    const songs = (await mapLimit(albums, ALBUM_FETCH_LIMIT, (a) => client.getAlbum(a.id))).flatMap((a) => a.song)
     if (!songs.length) return
     player.setShuffle(shuffle)
     playFrom(songs, shuffle ? Math.floor(Math.random() * songs.length) : 0, moodRecent(value))

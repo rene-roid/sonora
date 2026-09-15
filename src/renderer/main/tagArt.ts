@@ -9,9 +9,9 @@
  */
 import { useEffect, useSyncExternalStore } from 'react'
 import type { SubsonicClient } from '@shared/subsonic/client'
-import type { AlbumID3 } from '@shared/subsonic/types'
 import type { View } from '@shared/types'
 import { cacheRead, cacheWrite, onCacheClear } from '@renderer/shared/cache'
+import { allAlbums } from './albumList'
 import { useClient } from '@renderer/shared/sessionStore'
 import { shuffle, seedOfView, type MixSeed } from './mixes'
 
@@ -78,7 +78,6 @@ let generation = 0
 onCacheClear(() => {
   generation++
   memo.clear()
-  albumsJob = undefined
   inflight.clear()
   for (const fn of listeners) fn()
 })
@@ -107,32 +106,10 @@ function subscribe(fn: () => void): () => void {
 const coversOf = (items: { id: string; coverArt?: string }[]): string[] =>
   [...new Set(items.map((i) => i.coverArt ?? i.id))].slice(0, POOL)
 
-/**
- * The whole album list, shared with the Moods view under the same cache key so the two never
- * fetch it twice. Every mood and most genres are answered out of this one pass.
- */
-const ALBUMS_KEY = 'albums:all'
-let albumsJob: Promise<AlbumID3[]> | undefined
-
-function albums(client: SubsonicClient): Promise<AlbumID3[]> {
-  const cached = cacheRead<AlbumID3[]>(ALBUMS_KEY)
-  if (cached?.length) return Promise.resolve(cached)
-  const job = (albumsJob ??= client
-    .getAllAlbums()
-    .then((all) => {
-      cacheWrite(ALBUMS_KEY, all)
-      return all
-    })
-    .finally(() => {
-      albumsJob = undefined
-    }))
-  return job
-}
-
 async function candidates(client: SubsonicClient, seed: MixSeed): Promise<string[]> {
   const want = seed.value.toLowerCase()
   if (seed.kind === 'mood') {
-    return coversOf((await albums(client)).filter((a) => a.moods?.some((m) => m.toLowerCase() === want)))
+    return coversOf((await allAlbums(client)).filter((a) => a.moods?.some((m) => m.toLowerCase() === want)))
   }
   if (seed.kind === 'artist') {
     const { artists } = await client.search3(seed.value, { artistCount: 5, albumCount: 0, songCount: 0 })
@@ -141,7 +118,7 @@ async function candidates(client: SubsonicClient, seed: MixSeed): Promise<string
   }
   // A genre's albums come out of the list pass above; only a genre that is no album's primary
   // genre -- which is the one thing that list does not carry -- costs a request of its own.
-  const tagged = coversOf((await albums(client)).filter((a) => a.genre?.toLowerCase() === want))
+  const tagged = coversOf((await allAlbums(client)).filter((a) => a.genre?.toLowerCase() === want))
   return tagged.length ? tagged : coversOf(await client.getSongsByGenre(seed.value, POOL))
 }
 

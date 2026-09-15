@@ -6,6 +6,7 @@ import { TagArt } from '../components/TagArt'
 import { TrackPage } from '../components/TrackPage'
 import { SectionHeader } from '../components/ui'
 import { buildMix, mixSeeds, type MixSeed } from '../mixes'
+import { allAlbums } from '../albumList'
 import { recentOf } from '../recents'
 import { useAsync } from '../useAsync'
 
@@ -31,7 +32,7 @@ export function MixRow() {
               key={`${seed.kind}:${seed.value}`}
               title={title}
               view={{ name: 'mix', kind: seed.kind, value: seed.value }}
-              load={(c) => buildMix(c, seed)}
+              load={(c) => buildMix(c, seed, allAlbums)}
               recent={mixRecent(seed)}
               art={
                 <div className="h-full w-full" title={mixLabel(seed)}>
@@ -51,7 +52,7 @@ export function MixView({ value, kind = 'genre' }: { value: string; kind?: MixKi
   const seed: MixSeed = { kind, value }
   const state = useAsync(
     `mix:${kind}:${value}`,
-    () => (client ? buildMix(client, seed) : undefined),
+    () => (client ? buildMix(client, seed, allAlbums) : undefined),
     [client, kind, value]
   )
   return <TrackPage eyebrow={mixLabel(seed)} title={mixTitle(seed)} state={state} origin={mixRecent(seed)} />

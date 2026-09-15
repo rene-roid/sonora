@@ -4,7 +4,9 @@ import { parseDiscName } from '@shared/format'
 import { pushRecent, viewKey, type RecentItem, type Track, type View } from '@shared/types'
 import { player } from '@renderer/shared/playerStore'
 import { useSessionStore } from '@renderer/shared/sessionStore'
-import { buildMix, seedOfView } from './mixes'
+import { mapLimit } from '@shared/async'
+import { allAlbums } from './albumList'
+import { ALBUM_FETCH_LIMIT, buildMix, seedOfView } from './mixes'
 
 /** Describe a page for the shelf. Call sites pass this as the origin of a play. */
 export function recentOf(view: View, title: string, subtitle?: string, coverArt?: string): RecentItem {
@@ -47,18 +49,18 @@ export async function loadRecent(c: SubsonicClient, r: RecentItem): Promise<Trac
     }
     case 'artist': {
       const albums = [...(await c.getArtist(v.id)).album].sort((a, b) => (a.year ?? 0) - (b.year ?? 0))
-      return (await Promise.all(albums.map((a) => c.getAlbum(a.id)))).flatMap((a) => a.song)
+      return (await mapLimit(albums, ALBUM_FETCH_LIMIT, (a) => c.getAlbum(a.id))).flatMap((a) => a.song)
     }
     case 'playlist':
       return (await c.getPlaylist(v.id)).entry
     case 'genre':
       return c.getSongsByGenre(v.value)
     case 'mood': {
-      const albums = (await c.getAllAlbums()).filter((a) => a.moods?.includes(v.value))
-      return (await Promise.all(albums.map((a) => c.getAlbum(a.id)))).flatMap((a) => a.song)
+      const albums = (await allAlbums(c)).filter((a) => a.moods?.includes(v.value))
+      return (await mapLimit(albums, ALBUM_FETCH_LIMIT, (a) => c.getAlbum(a.id))).flatMap((a) => a.song)
     }
     case 'mix':
-      return buildMix(c, seedOfView(v))
+      return buildMix(c, seedOfView(v), allAlbums)
     case 'favorites':
       return (await c.getStarred2()).songs
     default:

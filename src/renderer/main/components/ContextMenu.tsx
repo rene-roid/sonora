@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 /** Where a right-click opened the menu, in viewport coordinates. */
@@ -7,21 +7,24 @@ export interface MenuPos {
   y: number
 }
 
-/** Opens on right-click, closes on any outside press, Esc, scroll or resize. */
+/**
+ * Opens on right-click, closes on any outside press, Esc, scroll or resize.
+ *
+ * `open` and `close` keep the same identity for the life of the hook, so a memoised row that is
+ * handed one of them is not re-rendered by its owner re-rendering for something else.
+ */
 export function useContextMenu(): {
   pos: MenuPos | null
   open: (e: React.MouseEvent) => void
   close: () => void
 } {
   const [pos, setPos] = useState<MenuPos | null>(null)
-  return {
-    pos,
-    open: (e) => {
-      e.preventDefault()
-      setPos({ x: e.clientX, y: e.clientY })
-    },
-    close: () => setPos(null)
-  }
+  const open = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setPos({ x: e.clientX, y: e.clientY })
+  }, [])
+  const close = useCallback(() => setPos(null), [])
+  return useMemo(() => ({ pos, open, close }), [pos, open, close])
 }
 
 export function ContextMenu({
