@@ -2,11 +2,14 @@ import { Heart, Shuffle } from 'lucide-react'
 import { useClient, useSettings } from '@renderer/shared/sessionStore'
 import { Cover } from '@renderer/shared/Cover'
 import { AlbumCard, CardGrid, Tile, TileGrid, gradient } from '../components/AlbumCard'
+import { TagArt } from '../components/TagArt'
 import { ErrorBox, Loading, PrimaryButton, SectionHeader } from '../components/ui'
 import { MixRow } from './Mixes'
 import { loadRecent, playFrom } from '../recents'
+import { artRefOf } from '../tagArt'
 import { useAsync } from '../useAsync'
 import type { AlbumListType } from '@shared/subsonic/types'
+import type { RecentItem } from '@shared/types'
 
 function AlbumRow({ title, type }: { title: string; type: AlbumListType }) {
   const client = useClient()
@@ -22,6 +25,17 @@ function AlbumRow({ title, type }: { title: string; type: AlbumListType }) {
       )}
     </section>
   )
+}
+
+/**
+ * A shelf tile's picture: real artwork where the thing has some, and otherwise the same mood,
+ * genre or mix background its own page wears, so the shelf matches what the user came from.
+ */
+function RecentArt({ item }: { item: RecentItem }) {
+  const art = artRefOf(item.view)
+  if (art) return <TagArt art={art} name={item.title} />
+  if (item.coverArt) return <Cover id={item.coverArt} size={160} className="h-full w-full" rounded="rounded-none" />
+  return <div className="h-full w-full" style={{ background: gradient(item.title) }} />
 }
 
 function RecentGrid() {
@@ -47,13 +61,7 @@ function RecentGrid() {
             view={it.view}
             load={(c) => loadRecent(c, it)}
             recent={it}
-            art={
-              it.coverArt ? (
-                <Cover id={it.coverArt} size={160} className="h-full w-full" rounded="rounded-none" />
-              ) : (
-                <div className="h-full w-full" style={{ background: gradient(it.title) }} />
-              )
-            }
+            art={<RecentArt item={it} />}
           />
         ))}
       </TileGrid>

@@ -6,12 +6,20 @@
 const PREFIX = 'sonora.cache.'
 const SCOPE_KEY = 'sonora.cacheScope'
 
+const clearListeners = new Set<() => void>()
+
+/** Told when the cache is wiped, so in-memory mirrors of cached data drop what they are holding. */
+export function onCacheClear(fn: () => void): void {
+  clearListeners.add(fn)
+}
+
 function clear(): void {
   // Backwards, because removing an entry shifts every index above it down.
   for (let i = localStorage.length - 1; i >= 0; i--) {
     const k = localStorage.key(i)
     if (k?.startsWith(PREFIX)) localStorage.removeItem(k)
   }
+  for (const fn of clearListeners) fn()
 }
 
 /** Wipe everything when the logged-in server/user changes, so one account never sees another's library. */

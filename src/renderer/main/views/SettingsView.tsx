@@ -546,6 +546,16 @@ export function SettingsView() {
         <NormalizeSetting value={settings.normalize} onChange={(normalize) => update({ normalize })} />
       </section>
 
+      <section className="mb-8">
+        <SectionHeader title="Library" />
+        <Toggle
+          label="Detect soundtracks by title"
+          description="Also treat an album as a soundtrack when its title says so (e.g. “Original Soundtrack”, “OST”), for libraries tagged by musical style rather than genre"
+          checked={settings.soundtrackTitleMatch}
+          onChange={(v) => update({ soundtrackTitleMatch: v })}
+        />
+      </section>
+
       <SongCache maxGb={settings.cacheMaxGb} onChange={(cacheMaxGb) => update({ cacheMaxGb })} />
 
       <section className="mb-8">

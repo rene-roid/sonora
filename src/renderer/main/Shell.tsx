@@ -40,7 +40,7 @@ function Content() {
     case 'mood':
       return <MoodView value={view.value} />
     case 'mix':
-      return <MixView value={view.value} />
+      return <MixView value={view.value} kind={view.kind} />
     case 'artist':
       return <ArtistView id={view.id} />
     case 'album':

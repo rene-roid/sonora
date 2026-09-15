@@ -1,49 +1,58 @@
-import { Sparkles } from 'lucide-react'
+import type { MixKind } from '@shared/types'
 import { capitalize } from '@shared/format'
 import { useClient } from '@renderer/shared/sessionStore'
-import { Tile, TileGrid, gradient } from '../components/AlbumCard'
+import { Tile, TileGrid } from '../components/AlbumCard'
+import { TagArt } from '../components/TagArt'
 import { TrackPage } from '../components/TrackPage'
 import { SectionHeader } from '../components/ui'
-import { buildMix, mixSeeds } from '../mixes'
+import { buildMix, mixSeeds, type MixSeed } from '../mixes'
 import { recentOf } from '../recents'
 import { useAsync } from '../useAsync'
 
-const mixTitle = (value: string): string => `${capitalize(value)} Mix`
-const mixRecent = (value: string) => recentOf({ name: 'mix', value }, mixTitle(value), 'Mix')
+/** Tag text arrives lowercased from most taggers; an artist's name is already cased how they want it. */
+const mixTitle = (s: MixSeed): string => `${s.kind === 'artist' ? s.value : capitalize(s.value)} Mix`
+const mixLabel = (s: MixSeed): string => `${capitalize(s.kind)} mix`
+const mixRecent = (s: MixSeed) => recentOf({ name: 'mix', kind: s.kind, value: s.value }, mixTitle(s), mixLabel(s))
 
 /** Home row. Renders nothing until the server has enough play history to seed from. */
 export function MixRow() {
   const client = useClient()
-  const state = useAsync('mixes', () => (client ? mixSeeds(client) : undefined), [client])
+  // :2 because the cache is on disk and older builds stored bare genre strings under 'mixes'.
+  const state = useAsync('mixes:2', () => (client ? mixSeeds(client) : undefined), [client])
   if (!state.data?.length) return null
   return (
     <section className="mb-8">
       <SectionHeader title="Made for you" />
       <TileGrid>
-        {state.data.map((value) => (
-          <Tile
-            key={value}
-            title={mixTitle(value)}
-            view={{ name: 'mix', value }}
-            load={(c) => buildMix(c, value)}
-            recent={mixRecent(value)}
-            art={
-              <div
-                className="flex h-full w-full items-center justify-center"
-                style={{ background: gradient(mixTitle(value)) }}
-              >
-                <Sparkles size={22} />
-              </div>
-            }
-          />
-        ))}
+        {state.data.map((seed) => {
+          const title = mixTitle(seed)
+          return (
+            <Tile
+              key={`${seed.kind}:${seed.value}`}
+              title={title}
+              view={{ name: 'mix', kind: seed.kind, value: seed.value }}
+              load={(c) => buildMix(c, seed)}
+              recent={mixRecent(seed)}
+              art={
+                <div className="h-full w-full" title={mixLabel(seed)}>
+                  <TagArt art={{ style: 'mix', seed }} name={title} />
+                </div>
+              }
+            />
+          )
+        })}
       </TileGrid>
     </section>
   )
 }
 
-export function MixView({ value }: { value: string }) {
+export function MixView({ value, kind = 'genre' }: { value: string; kind?: MixKind }) {
   const client = useClient()
-  const state = useAsync(`mix:${value}`, () => (client ? buildMix(client, value) : undefined), [client, value])
-  return <TrackPage eyebrow="Mix" title={mixTitle(value)} state={state} origin={mixRecent(value)} />
+  const seed: MixSeed = { kind, value }
+  const state = useAsync(
+    `mix:${kind}:${value}`,
+    () => (client ? buildMix(client, seed) : undefined),
+    [client, kind, value]
+  )
+  return <TrackPage eyebrow={mixLabel(seed)} title={mixTitle(seed)} state={state} origin={mixRecent(seed)} />
 }

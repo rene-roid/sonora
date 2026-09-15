@@ -8,6 +8,13 @@ test('soundtrack genres match, ordinary ones do not', () => {
     expect(isSoundtrack(g)).toBe(false)
 })
 
+test('a soundtrack-y title is enough on its own, even when every genre tag is a plain music style', () => {
+  const genres = 'Indie, Jazz, R&B, Piano Ballad, J-Pop, Chiptune, Hyperpop, J-Rock, K-Pop, Synthwave'
+  expect(isSoundtrack(genres, 'Stellar Blade - Arrange Tracks (Original Soundtrack)')).toBe(true)
+  expect(isSoundtrack(undefined, 'Halo 2 OST')).toBe(true)
+  expect(isSoundtrack(genres, 'Stellar Blade - Arrange Tracks')).toBe(false)
+})
+
 test('disc suffixes split off the base name', () => {
   const cases: [string, string, number | undefined][] = [
     ['Halo 2 OST (Disc 2)', 'Halo 2 OST', 2],
