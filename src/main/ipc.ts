@@ -171,8 +171,9 @@ export function setupIpc(): void {
       await client.ping() // throws SubsonicError on bad credentials / unreachable server
       const previous = loadSession()
       if (previous?.username !== session.username || previous.server !== session.server) {
-        broadcast('settings:changed', [updateSettings({ recents: [] })])
-        void artCache.clear() // the picked backgrounds belong to the account that left
+        // Recents, saved mixes and picked backgrounds all belong to the account that left.
+        broadcast('settings:changed', [updateSettings({ recents: [], savedMixes: [] })])
+        void artCache.clear()
       }
       saveSession(session)
       broadcast('auth:changed', [session])
@@ -207,7 +208,7 @@ export function setupIpc(): void {
 
   ipcMain.handle('auth:logout', () => {
     clearSession()
-    broadcast('settings:changed', [updateSettings({ recents: [] })])
+    broadcast('settings:changed', [updateSettings({ recents: [], savedMixes: [] })])
     void artCache.clear()
     sendCommand('stop')
     broadcast('auth:changed', [null])
@@ -243,6 +244,7 @@ export function setupIpc(): void {
     }
     // A smaller budget has to take effect now, not at the next download.
     if (patch.cacheMaxGb !== undefined && patch.cacheMaxGb < before.cacheMaxGb) void audioCache.evict()
+    if (patch.artCacheMaxMb !== undefined && patch.artCacheMaxMb < before.artCacheMaxMb) void artCache.evict()
     broadcast('settings:changed', [next])
     return next
   })
@@ -259,6 +261,10 @@ export function setupIpc(): void {
   })
   ipcMain.handle('cache:stats', () => audioCache.stats())
   ipcMain.handle('cache:clear', () => audioCache.clear())
+
+  // ---- cover art cache -----------------------------------------------------
+  ipcMain.handle('art:stats', () => artCache.stats())
+  ipcMain.handle('art:clear', () => artCache.clear())
 
   // ---- windows -------------------------------------------------------------
   ipcMain.on('window:control', (e, action: 'minimize' | 'maximize' | 'close' | 'hide' | 'showMain' | 'toastShown' | 'toastLeaving' | 'toastDone') => {

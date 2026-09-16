@@ -1,6 +1,18 @@
 import { Music2 } from 'lucide-react'
 import { useState } from 'react'
-import { useClient } from './sessionStore'
+import { localArtUrl } from '@shared/art'
+import { useClient, useSettings } from './sessionStore'
+
+/**
+ * Where a cover is loaded from: Sonora's own copy over `sonora-art://` while the image cache has a
+ * budget, and straight off the server when it is turned off. The cached path is why a second visit
+ * to a page paints instantly -- main keeps the file, so nothing goes over the network again.
+ */
+export function useCoverUrl(id: string | undefined, size = 300): string | undefined {
+  const client = useClient()
+  const cached = useSettings().artCacheMaxMb > 0
+  return cached ? localArtUrl(id) : client?.coverArtUrl(id, size)
+}
 
 export function Cover({
   id,
@@ -13,9 +25,9 @@ export function Cover({
   className?: string
   rounded?: string
 }) {
-  const client = useClient()
   const [failed, setFailed] = useState(false)
-  const url = !failed ? client?.coverArtUrl(id, size) : undefined
+  const source = useCoverUrl(id, size)
+  const url = failed ? undefined : source
   return (
     <div className={`relative shrink-0 overflow-hidden bg-surface-3 ${rounded} ${className}`}>
       {url ? (

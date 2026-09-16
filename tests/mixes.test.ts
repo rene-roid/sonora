@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { SubsonicClient } from '../src/shared/subsonic/client'
 import { buildMix, mixSeeds, seedOfView } from '../src/renderer/main/mixes'
-import type { Session } from '../src/shared/types'
+import { saveMix, type SavedMix, type Session, type Track } from '../src/shared/types'
 
 const session: Session = { server: 'http://s', username: 'u', token: 't', salt: 's' }
 
@@ -167,5 +167,30 @@ describe('seedOfView', () => {
   test('reads a mix view, defaulting views persisted before mixes had kinds to genre', () => {
     expect(seedOfView({ name: 'mix', value: 'rock' })).toEqual({ kind: 'genre', value: 'rock' })
     expect(seedOfView({ name: 'mix', kind: 'mood', value: 'chill' })).toEqual({ kind: 'mood', value: 'chill' })
+  })
+})
+
+describe('saveMix', () => {
+  const mix = (id: string): SavedMix => ({
+    id,
+    title: `${id} Mix`,
+    seed: { kind: 'genre', value: id },
+    savedAt: 0,
+    tracks: [{ id: 't1' } as Track]
+  })
+  const keep = (...ids: string[]): SavedMix[] => ids.reduce((acc, id) => saveMix(acc, mix(id)), [] as SavedMix[])
+
+  test('newest first and capped at 24', () => {
+    const ids = Array.from({ length: 30 }, (_, i) => `m${i}`)
+    const kept = keep(...ids)
+    expect(kept).toHaveLength(24)
+    expect(kept[0].id).toBe('m29')
+    expect(kept.at(-1)!.id).toBe('m6')
+  })
+
+  test('saving the same mix again replaces its entry instead of duplicating it', () => {
+    const kept = saveMix(keep('a', 'b'), { ...mix('a'), savedAt: 5 })
+    expect(kept.map((m) => m.id)).toEqual(['a', 'b'])
+    expect(kept[0].savedAt).toBe(5)
   })
 })

@@ -8,17 +8,18 @@
 import { useState } from 'react'
 import { MicVocal, Smile, Sparkles } from 'lucide-react'
 import type { MixKind } from '@shared/types'
-import { localArtUrl } from '@shared/art'
+import { useCoverUrl } from '@renderer/shared/Cover'
 import { ART_COUNT, useTagArt, type ArtRef } from '../tagArt'
 import { gradient, hue } from './AlbumCard'
 
-/** A cover out of the local art cache. Renders nothing at all if it is not there and cannot be got. */
+/** A cover behind a tag. Renders nothing at all if it is not there and cannot be got. */
 function ArtImage({ id, className = '' }: { id: string; className?: string }) {
   const [failed, setFailed] = useState(false)
+  const url = useCoverUrl(id)
   if (failed) return null
   return (
     <img
-      src={localArtUrl(id)}
+      src={url}
       alt=""
       draggable={false}
       loading="lazy"

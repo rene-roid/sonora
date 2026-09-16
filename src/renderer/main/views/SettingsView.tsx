@@ -490,6 +490,48 @@ function SongCache({ maxGb, onChange }: { maxGb: number; onChange: (v: number) =
   )
 }
 
+/** Disk budget for cover art, plus what is on disk right now. */
+function ImageCache({ maxMb, onChange }: { maxMb: number; onChange: (v: number) => void }) {
+  const [used, setUsed] = useState<{ bytes: number; count: number }>()
+  const refresh = useCallback((): void => {
+    void window.sonora.art.stats().then(setUsed)
+  }, [])
+  useEffect(refresh, [refresh])
+
+  return (
+    <section className="mb-8">
+      <SectionHeader
+        title="Image cache"
+        action={<GhostButton onClick={() => void window.sonora.art.clear().then(refresh)}>Clear cache</GhostButton>}
+      />
+      <p className="mb-3 px-3 text-xs text-ink-3">
+        Cover art is downloaded once and kept on disk, so pages you have already seen paint instantly on the next
+        visit and still show their artwork with the server unreachable. Once the limit is reached, the covers shown
+        longest ago are deleted first. Turning this off loads every cover from the server each time.
+      </p>
+      <label className="flex items-center justify-between gap-6 px-3 py-3">
+        <div>
+          <div className="text-sm font-medium">Disk limit</div>
+          <div className="text-xs text-ink-2">
+            {maxMb === 0 ? 'Off \u2014 covers load from the server every time' : `${maxMb} MB`}
+            {used && ` \u00b7 ${(used.bytes / 1024 ** 2).toFixed(0)} MB used by ${used.count} covers`}
+          </div>
+        </div>
+        <input
+          type="range"
+          className="range w-40"
+          min={0}
+          max={2048}
+          step={64}
+          value={maxMb}
+          onChange={(e) => onChange(Number(e.target.value))}
+          onMouseUp={refresh}
+        />
+      </label>
+    </section>
+  )
+}
+
 export function SettingsView() {
   const settings = useSettings()
   const session = useSessionStore((s) => s.session)
@@ -559,6 +601,8 @@ export function SettingsView() {
       </section>
 
       <SongCache maxGb={settings.cacheMaxGb} onChange={(cacheMaxGb) => update({ cacheMaxGb })} />
+
+      <ImageCache maxMb={settings.artCacheMaxMb} onChange={(artCacheMaxMb) => update({ artCacheMaxMb })} />
 
       <section className="mb-8">
         <SectionHeader title="Behaviour" />

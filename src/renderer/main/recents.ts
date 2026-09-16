@@ -7,6 +7,7 @@ import { useSessionStore } from '@renderer/shared/sessionStore'
 import { mapLimit } from '@shared/async'
 import { allAlbums } from './albumList'
 import { ALBUM_FETCH_LIMIT, buildMix, seedOfView } from './mixes'
+import { findSavedMix } from './savedMixes'
 
 /** Describe a page for the shelf. Call sites pass this as the origin of a play. */
 export function recentOf(view: View, title: string, subtitle?: string, coverArt?: string): RecentItem {
@@ -61,6 +62,9 @@ export async function loadRecent(c: SubsonicClient, r: RecentItem): Promise<Trac
     }
     case 'mix':
       return buildMix(c, seedOfView(v), allAlbums)
+    // Saved with its songs, so the shelf plays the lineup as it was kept rather than today's roll.
+    case 'savedMix':
+      return findSavedMix(v.id)?.tracks ?? []
     case 'favorites':
       return (await c.getStarred2()).songs
     default:

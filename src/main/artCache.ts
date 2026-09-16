@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { ART_SCHEME, ART_SIZE, artIdFromUrl } from '@shared/art'
 import { SubsonicClient } from '@shared/subsonic/client'
 import { loadSession } from './credentials'
+import { getSettings } from './store'
 
 /**
  * On-disk cache of cover art, served to the windows over the `sonora-art://` scheme.
@@ -14,12 +15,15 @@ import { loadSession } from './credentials'
  * the mood, genre and mix backgrounds stick -- they are picked from the library, then kept, so
  * they paint instantly on the next launch and survive the server being unreachable.
  *
- * Thumbnails are small and there is a bounded number of them, so the budget is a fixed constant
- * rather than a setting; the least recently shown file goes first when it is reached.
+ * The `artCacheMaxMb` setting is the disk budget; the least recently shown file goes first when it
+ * is reached. A budget of 0 turns the cache off, and the windows then load covers off the server.
  */
 
-/** Disk budget for cached covers. A 400px thumbnail is tens of KB, so this holds thousands. */
-const MAX_BYTES = 128 * 1024 * 1024
+const MB = 1024 * 1024
+
+function budget(): number {
+  return getSettings().artCacheMaxMb * MB
+}
 
 /** Bytes written since the last eviction pass. Eviction walks the whole directory, so it waits. */
 const EVICT_EVERY = 8 * 1024 * 1024
@@ -43,6 +47,7 @@ function fileFor(id: string): string {
 const inflight = new Map<string, Promise<string | null>>()
 
 function ensure(id: string): Promise<string | null> {
+  if (budget() <= 0) return Promise.resolve(null)
   const running = inflight.get(id)
   if (running) return running
   const job = download(id).finally(() => inflight.delete(id))
@@ -148,12 +153,18 @@ async function entries(): Promise<Entry[]> {
 export async function evict(): Promise<void> {
   sinceEvict = 0
   const all = await entries()
+  const max = budget()
   let total = all.reduce((n, e) => n + e.size, 0)
   for (const e of all.sort((a, b) => a.used - b.used)) {
-    if (total <= MAX_BYTES) break
+    if (total <= max) break
     await rm(e.file, { force: true })
     total -= e.size
   }
+}
+
+export async function stats(): Promise<{ bytes: number; count: number }> {
+  const all = await entries()
+  return { bytes: all.reduce((n, e) => n + e.size, 0), count: all.length }
 }
 
 export function clear(): Promise<void> {

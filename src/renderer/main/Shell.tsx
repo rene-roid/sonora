@@ -11,7 +11,7 @@ import { Soundtracks } from './views/Soundtracks'
 import { Artists } from './views/Artists'
 import { Genres, GenreView } from './views/Genres'
 import { Moods, MoodView } from './views/Moods'
-import { MixView } from './views/Mixes'
+import { MixView, MixesView, SavedMixView } from './views/Mixes'
 import { ArtistView } from './views/ArtistView'
 import { AlbumView } from './views/AlbumView'
 import { PlaylistView } from './views/PlaylistView'
@@ -42,6 +42,10 @@ function Content() {
       return <MoodView value={view.value} />
     case 'mix':
       return <MixView value={view.value} kind={view.kind} />
+    case 'mixes':
+      return <MixesView />
+    case 'savedMix':
+      return <SavedMixView id={view.id} />
     case 'artist':
       return <ArtistView id={view.id} />
     case 'album':

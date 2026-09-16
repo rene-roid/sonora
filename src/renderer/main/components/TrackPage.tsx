@@ -14,7 +14,8 @@ export function TrackPage({
   title,
   state,
   origin,
-  cover
+  cover,
+  actions
 }: {
   eyebrow: string
   title: string
@@ -23,6 +24,8 @@ export function TrackPage({
   origin: RecentItem
   /** Artwork beside the heading, the same picture the tile that led here was wearing. */
   cover?: ReactNode
+  /** Extra buttons after Play and Shuffle, for whatever else this kind of page can do. */
+  actions?: ReactNode
 }) {
   const [query, setQuery] = useState('')
   const songs = state.data
@@ -54,6 +57,7 @@ export function TrackPage({
             >
               <Shuffle size={16} /> Shuffle
             </GhostButton>
+            {actions}
           </>
         }
       />

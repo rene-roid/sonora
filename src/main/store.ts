@@ -48,7 +48,8 @@ function readSettings(): Settings {
     toast: sanitizeToast(saved.toast),
     windowBounds: { ...(saved.windowBounds ?? {}) },
     // Entries written before the shelf stored an origin have no key and cannot be played.
-    recents: (saved.recents ?? []).filter((r) => r?.key)
+    recents: (saved.recents ?? []).filter((r) => r?.key),
+    savedMixes: (saved.savedMixes ?? []).filter((m) => m?.id && m.tracks?.length)
   }
 }
 

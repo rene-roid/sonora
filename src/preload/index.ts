@@ -117,6 +117,16 @@ const api = {
     }
   },
 
+  /** On-disk cover art cache, for the settings panel. The images themselves go over `sonora-art://`. */
+  art: {
+    stats(): Promise<{ bytes: number; count: number }> {
+      return ipcRenderer.invoke('art:stats')
+    },
+    clear(): Promise<void> {
+      return ipcRenderer.invoke('art:clear')
+    }
+  },
+
   window: {
     minimize: (): void => ipcRenderer.send('window:control', 'minimize'),
     maximize: (): void => ipcRenderer.send('window:control', 'maximize'),

@@ -149,6 +149,8 @@ export type View =
   | { name: 'moods' }
   | { name: 'mood'; value: string }
   | { name: 'mix'; value: string; kind?: MixKind }
+  | { name: 'mixes' }
+  | { name: 'savedMix'; id: string }
   | { name: 'artist'; id: string }
   /** `discIds` are sibling albums holding the other discs of the same release, in disc order. */
   | { name: 'album'; id: string; discIds?: string[] }
@@ -185,6 +187,31 @@ const RECENTS_LIMIT = 7
 export function pushRecent(items: RecentItem[], item: RecentItem | null | undefined): RecentItem[] {
   if (!item || items[0]?.key === item.key) return items
   return [item, ...items.filter((i) => i.key !== item.key)].slice(0, RECENTS_LIMIT)
+}
+
+/**
+ * A mix frozen at the moment it was saved. Mixes are rebuilt from the server every day, so the
+ * songs are kept with it rather than the seed alone -- reopening a saved mix gives back the exact
+ * lineup, which is the whole point of saving one.
+ *
+ * ponytail: the songs ride along in the settings file, like the resume queue already does. Fine for
+ * the two dozen mixes `saveMix` allows; move them to their own file if that starts to hurt.
+ */
+export interface SavedMix {
+  /** Seed and the day it was saved, so saving the same mix twice in a day replaces it. */
+  id: string
+  title: string
+  /** What the mix was built around, so the saved copy keeps the artwork it was wearing. */
+  seed: { kind: MixKind; value: string }
+  savedAt: number
+  tracks: Track[]
+}
+
+const SAVED_MIXES_LIMIT = 24
+
+/** Saved mixes, newest first, one entry per id and capped. */
+export function saveMix(mixes: SavedMix[], mix: SavedMix): SavedMix[] {
+  return [mix, ...mixes.filter((m) => m.id !== mix.id)].slice(0, SAVED_MIXES_LIMIT)
 }
 
 export type WindowName = 'main' | 'host' | 'toast' | 'mini' | 'widget'
@@ -342,6 +369,10 @@ export interface Settings {
   recents: RecentItem[]
   /** Disk budget for cached songs, in GB. 0 turns caching off. */
   cacheMaxGb: number
+  /** Disk budget for cached cover art, in MB. 0 turns it off and covers load off the server. */
+  artCacheMaxMb: number
+  /** Mixes the user kept, newest first. */
+  savedMixes: SavedMix[]
   /** Also match soundtrack wording in the album title, not just the genre tag. */
   soundtrackTitleMatch: boolean
 }
@@ -364,6 +395,8 @@ export const defaultSettings: Settings = {
   resume: null,
   recents: [],
   cacheMaxGb: 5,
+  artCacheMaxMb: 256,
+  savedMixes: [],
   soundtrackTitleMatch: true
 }
 
