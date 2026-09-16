@@ -37,8 +37,8 @@ const ROTATE_MS: Record<ArtStyle, number> = {
 /** How many covers each style draws. */
 export const ART_COUNT: Record<ArtStyle, number> = { mood: 1, genre: 4, mix: 3 }
 
-/** Covers considered for a tag. Past this the pick is plenty varied and the sort is wasted work. */
-const POOL = 120
+/** Songs asked for when a genre has to be read off the server. The whole answer is then in play. */
+const GENRE_SONGS = 500
 
 /** Backgrounds resolved at once, so opening a page of 200 genres does not stampede the server. */
 const MAX_PARALLEL = 4
@@ -103,10 +103,12 @@ function subscribe(fn: () => void): () => void {
 
 // ---- picking ---------------------------------------------------------------
 
+// Every cover the tag has, not a head slice of them: the shuffle in `resolve` is what narrows
+// this down, and cutting the list first would confine the pick to the alphabetical front of a tag.
 const coversOf = (items: { id: string; coverArt?: string }[]): string[] =>
-  [...new Set(items.map((i) => i.coverArt ?? i.id))].slice(0, POOL)
+  [...new Set(items.map((i) => i.coverArt ?? i.id))]
 
-async function candidates(client: SubsonicClient, seed: MixSeed): Promise<string[]> {
+export async function candidates(client: SubsonicClient, seed: MixSeed): Promise<string[]> {
   const want = seed.value.toLowerCase()
   if (seed.kind === 'mood') {
     return coversOf((await allAlbums(client)).filter((a) => a.moods?.some((m) => m.toLowerCase() === want)))
@@ -119,7 +121,7 @@ async function candidates(client: SubsonicClient, seed: MixSeed): Promise<string
   // A genre's albums come out of the list pass above; only a genre that is no album's primary
   // genre -- which is the one thing that list does not carry -- costs a request of its own.
   const tagged = coversOf((await allAlbums(client)).filter((a) => a.genre?.toLowerCase() === want))
-  return tagged.length ? tagged : coversOf(await client.getSongsByGenre(seed.value, POOL))
+  return tagged.length ? tagged : coversOf(await client.getSongsByGenre(seed.value, GENRE_SONGS))
 }
 
 // ---- resolving -------------------------------------------------------------
