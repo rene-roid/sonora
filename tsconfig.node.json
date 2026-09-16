@@ -12,7 +12,7 @@
     "isolatedModules": true,
     "types": ["node", "electron-vite/node", "bun"],
     "baseUrl": ".",
-    "paths": { "@shared/*": ["src/shared/*"] }
+    "paths": { "@shared/*": ["src/shared/*"], "@renderer/*": ["src/renderer/*"] }
   },
   "include": ["electron.vite.config.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*", "scripts/**/*", "tests/**/*"]
 }
