@@ -26,6 +26,13 @@ export function NowPlayingBar() {
   const menu = useContextMenu()
   const star = useStar(track)
 
+  // Drop a pending scrub once the real position catches up to it, or once the track changes
+  // out from under it (next/prev while dragging) — otherwise the bar freezes on the old value.
+  useEffect(() => setScrub(null), [track?.id])
+  useEffect(() => {
+    if (scrub !== null && Math.abs(position - scrub) < 0.35) setScrub(null)
+  }, [position, scrub])
+
   const shown = scrub ?? position
   const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2
 
@@ -102,14 +109,8 @@ export function NowPlayingBar() {
             value={shown}
             disabled={!track}
             onChange={(e) => setScrub(Number(e.target.value))}
-            onMouseUp={(e) => {
-              player.seek(Number((e.target as HTMLInputElement).value))
-              setScrub(null)
-            }}
-            onKeyUp={(e) => {
-              player.seek(Number((e.target as HTMLInputElement).value))
-              setScrub(null)
-            }}
+            onPointerUp={(e) => player.seek(Number((e.target as HTMLInputElement).value))}
+            onKeyUp={(e) => player.seek(Number((e.target as HTMLInputElement).value))}
             style={{
               background: `linear-gradient(to right, #fff ${duration ? (shown / duration) * 100 : 0}%, rgba(255,255,255,0.2) 0)`
             }}
