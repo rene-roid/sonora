@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { SubsonicClient, pickFastestServer, probeServers } from '../src/shared/subsonic/client'
 import type { Session } from '../src/shared/types'
+import { sameAccount, withServerList, withServers } from '../src/shared/auth'
 
 const FAST = 'http://fast'
 const SLOW = 'http://slow'
@@ -59,5 +60,24 @@ describe('multiple connections', () => {
     )
     expect(client.getGenres()).rejects.toThrow('HTTP 500')
     expect(client.server).toBe(FAST)
+  })
+})
+
+describe('session transforms', () => {
+  test('withServerList normalises, dedupes and keeps the active pick when still listed', () => {
+    const next = withServerList(session, ['http://fast/', 'http://fast', 'http://new'])
+    expect(next?.servers).toEqual(['http://fast', 'http://new'])
+    expect(next?.server).toBe('http://fast') // DEAD dropped from the list, first candidate takes over
+    expect(withServerList(session, [])).toBeNull()
+  })
+
+  test('withServers always includes the active server, first', () => {
+    expect(withServers({ ...session, server: 'http://x', servers: ['http://y'] }).servers).toEqual(['http://x', 'http://y'])
+  })
+
+  test('sameAccount compares user and server', () => {
+    expect(sameAccount(session, { ...session })).toBe(true)
+    expect(sameAccount(null, session)).toBe(false)
+    expect(sameAccount(session, { ...session, username: 'other' })).toBe(false)
   })
 })

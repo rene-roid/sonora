@@ -1,4 +1,4 @@
-import { Heart, ListMusic, MicVocal, PictureInPicture2, Repeat, Repeat1, Shuffle, Volume1, Volume2, VolumeX } from 'lucide-react'
+import { Heart, ListMusic, MicVocal, Pause, PictureInPicture2, Play, Repeat, Repeat1, Shuffle, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Track } from '@shared/types'
 import { formatTime } from '@shared/format'
@@ -10,30 +10,65 @@ import { nav, useNav } from './nav'
 import { useContextMenu } from './components/ContextMenu'
 import { TrackMenu } from './components/TrackList'
 
+/** The desktop footer above md; a tappable strip that opens the full-screen player below it. */
 export function NowPlayingBar() {
+  return (
+    <>
+      <MiniBar />
+      <DesktopBar />
+    </>
+  )
+}
+
+function MiniBar() {
   const track = usePlayerState((s) => s.track)
+  const playing = usePlayerState((s) => s.playing)
   const position = usePlayerState((s) => s.position)
   const duration = usePlayerState((s) => s.duration)
+  if (!track) return null
+  return (
+    <div className="relative flex h-14 shrink-0 items-center gap-3 border-t border-stroke bg-surface-2 px-3 md:hidden" onClick={nav.toggleFullPlayer}>
+      <div className="absolute top-0 left-0 h-0.5 bg-accent" style={{ width: `${duration ? (position / duration) * 100 : 0}%` }} />
+      <Cover id={track.coverArt} size={80} className="h-10 w-10" />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-semibold">{track.title}</div>
+        <div className="truncate text-xs text-ink-2">{track.artist}</div>
+      </div>
+      <button
+        className="icon-btn h-10 w-10"
+        onClick={(e) => {
+          e.stopPropagation()
+          player.toggle()
+        }}
+        title={playing ? 'Pause' : 'Play'}
+      >
+        {playing ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" className="ml-0.5" />}
+      </button>
+      <button
+        className="icon-btn h-10 w-10"
+        onClick={(e) => {
+          e.stopPropagation()
+          player.next()
+        }}
+        title="Next"
+      >
+        <SkipForward size={20} />
+      </button>
+    </div>
+  )
+}
+
+function DesktopBar() {
+  const track = usePlayerState((s) => s.track)
   const volume = usePlayerState((s) => s.volume)
   const muted = usePlayerState((s) => s.muted)
-  const repeat = usePlayerState((s) => s.repeat)
-  const shuffle = usePlayerState((s) => s.shuffle)
   const index = usePlayerState((s) => s.index)
   const showQueue = useNav((s) => s.showQueue)
   const showLyrics = useNav((s) => s.showLyrics)
   const settings = useSettings()
-  const [scrub, setScrub] = useState<number | null>(null)
   const menu = useContextMenu()
   const star = useStar(track)
 
-  // Drop a pending scrub once the real position catches up to it, or once the track changes
-  // out from under it (next/prev while dragging) — otherwise the bar freezes on the old value.
-  useEffect(() => setScrub(null), [track?.id])
-  useEffect(() => {
-    if (scrub !== null && Math.abs(position - scrub) < 0.35) setScrub(null)
-  }, [position, scrub])
-
-  const shown = scrub ?? position
   const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2
 
   const handleVolumeWheel = (e: React.WheelEvent) => {
@@ -45,7 +80,7 @@ export function NowPlayingBar() {
 
   return (
     <footer
-      className="grid h-[88px] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-stroke bg-surface px-4"
+      className="hidden h-[88px] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-t border-stroke bg-surface px-4 md:grid"
       onWheel={handleVolumeWheel}
     >
       <div className="flex min-w-0 items-center gap-3" onContextMenu={(e) => track && menu.open(e)}>
@@ -82,41 +117,11 @@ export function NowPlayingBar() {
 
       <div className="flex w-[520px] flex-col items-center gap-1.5">
         <div className="flex items-center gap-2">
-          <button
-            className={`icon-btn h-8 w-8 ${shuffle ? 'text-accent hover:text-accent' : ''}`}
-            onClick={() => player.setShuffle(!shuffle)}
-            title="Shuffle"
-          >
-            <Shuffle size={16} />
-          </button>
+          <ShuffleButton />
           <TransportControls size={18} />
-          <button
-            className={`icon-btn h-8 w-8 ${repeat !== 'off' ? 'text-accent hover:text-accent' : ''}`}
-            onClick={() => player.cycleRepeat(repeat)}
-            title={`Repeat: ${repeat}`}
-          >
-            {repeat === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
-          </button>
+          <RepeatButton />
         </div>
-        <div className="flex w-full items-center gap-2 text-[11px] tabular-nums text-ink-2">
-          <span className="w-10 text-right">{formatTime(shown)}</span>
-          <input
-            type="range"
-            className="range"
-            min={0}
-            max={Math.max(duration, 0.01)}
-            step={0.1}
-            value={shown}
-            disabled={!track}
-            onChange={(e) => setScrub(Number(e.target.value))}
-            onPointerUp={(e) => player.seek(Number((e.target as HTMLInputElement).value))}
-            onKeyUp={(e) => player.seek(Number((e.target as HTMLInputElement).value))}
-            style={{
-              background: `linear-gradient(to right, #fff ${duration ? (shown / duration) * 100 : 0}%, rgba(255,255,255,0.2) 0)`
-            }}
-          />
-          <span className="w-10">{formatTime(duration)}</span>
-        </div>
+        <SeekBar />
       </div>
 
       <div className="flex items-center justify-end gap-1">
@@ -165,8 +170,72 @@ export function NowPlayingBar() {
   )
 }
 
+export function ShuffleButton({ size = 16 }: { size?: number }) {
+  const shuffle = usePlayerState((s) => s.shuffle)
+  return (
+    <button
+      className={`icon-btn h-8 w-8 ${shuffle ? 'text-accent hover:text-accent' : ''}`}
+      onClick={() => player.setShuffle(!shuffle)}
+      title="Shuffle"
+    >
+      <Shuffle size={size} />
+    </button>
+  )
+}
+
+export function RepeatButton({ size = 16 }: { size?: number }) {
+  const repeat = usePlayerState((s) => s.repeat)
+  return (
+    <button
+      className={`icon-btn h-8 w-8 ${repeat !== 'off' ? 'text-accent hover:text-accent' : ''}`}
+      onClick={() => player.cycleRepeat(repeat)}
+      title={`Repeat: ${repeat}`}
+    >
+      {repeat === 'one' ? <Repeat1 size={size} /> : <Repeat size={size} />}
+    </button>
+  )
+}
+
+/** Position slider with time labels; shared by the footer and the full-screen player. */
+export function SeekBar() {
+  const track = usePlayerState((s) => s.track)
+  const position = usePlayerState((s) => s.position)
+  const duration = usePlayerState((s) => s.duration)
+  const [scrub, setScrub] = useState<number | null>(null)
+
+  // Drop a pending scrub once the real position catches up to it, or once the track changes
+  // out from under it (next/prev while dragging) — otherwise the bar freezes on the old value.
+  useEffect(() => setScrub(null), [track?.id])
+  useEffect(() => {
+    if (scrub !== null && Math.abs(position - scrub) < 0.35) setScrub(null)
+  }, [position, scrub])
+
+  const shown = scrub ?? position
+  return (
+    <div className="flex w-full items-center gap-2 text-[11px] tabular-nums text-ink-2">
+      <span className="w-10 text-right">{formatTime(shown)}</span>
+      <input
+        type="range"
+        className="range"
+        min={0}
+        max={Math.max(duration, 0.01)}
+        step={0.1}
+        value={shown}
+        disabled={!track}
+        onChange={(e) => setScrub(Number(e.target.value))}
+        onPointerUp={(e) => player.seek(Number((e.target as HTMLInputElement).value))}
+        onKeyUp={(e) => player.seek(Number((e.target as HTMLInputElement).value))}
+        style={{
+          background: `linear-gradient(to right, #fff ${duration ? (shown / duration) * 100 : 0}%, rgba(255,255,255,0.2) 0)`
+        }}
+      />
+      <span className="w-10">{formatTime(duration)}</span>
+    </div>
+  )
+}
+
 /** Star/unstar the current track on the server. Optimistic, reverts if the call fails. */
-function useStar(track: Track | null): { starred: boolean; toggle: () => Promise<void>; disabled: boolean } {
+export function useStar(track: Track | null): { starred: boolean; toggle: () => Promise<void>; disabled: boolean } {
   const client = useClient()
   const [starred, setStarred] = useState(false)
 
@@ -188,14 +257,16 @@ function useStar(track: Track | null): { starred: boolean; toggle: () => Promise
   }
 }
 
-function FavoriteButton({
+export function FavoriteButton({
   starred,
   toggle,
-  disabled
+  disabled,
+  size = 16
 }: {
   starred: boolean
   toggle: () => Promise<void>
   disabled: boolean
+  size?: number
 }) {
   return (
     <button
@@ -204,7 +275,7 @@ function FavoriteButton({
       title={starred ? 'Remove from favorites' : 'Add to favorites'}
       onClick={() => void toggle()}
     >
-      <Heart size={16} fill={starred ? 'currentColor' : 'none'} />
+      <Heart size={size} fill={starred ? 'currentColor' : 'none'} />
     </button>
   )
 }

@@ -1,16 +1,12 @@
 import { safeStorage } from 'electron'
 import { store } from './store'
 import type { Session } from '@shared/types'
+import { withServers } from '@shared/auth'
 
 /**
  * Credential storage backed by Electron's safeStorage (DPAPI on Windows, Keychain on macOS,
  * libsecret on Linux). Only the derived Subsonic token + salt are stored, never the password.
  */
-
-/** Keep the candidate list a deduped superset that always contains the active server. */
-function withServers(s: Session): Session {
-  return { ...s, servers: [...new Set([s.server, ...(s.servers ?? [])])] }
-}
 
 /**
  * The decrypted session, kept in memory.

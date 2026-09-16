@@ -29,7 +29,7 @@ export function AlbumCard({ album, discIds }: { album: AlbumID3; discIds?: strin
         <Cover id={album.coverArt ?? album.id} size={300} className="aspect-square w-full shadow-lg" />
         <button
           onClick={playAlbum}
-          className="absolute right-2 bottom-2 flex h-11 w-11 translate-y-2 items-center justify-center rounded-full bg-accent text-black opacity-0 shadow-xl transition group-hover:translate-y-0 group-hover:opacity-100 hover:scale-105"
+          className="absolute right-2 bottom-2 flex h-11 w-11 translate-y-2 items-center justify-center rounded-full bg-accent text-black opacity-0 shadow-xl transition group-hover:translate-y-0 group-hover:opacity-100 hover:scale-105 pointer-coarse:translate-y-0 pointer-coarse:opacity-100"
           title="Play album"
         >
           <Play size={20} fill="currentColor" className="ml-0.5" />
@@ -151,7 +151,7 @@ export function Tile({
       <button
         onClick={play}
         title={`Play ${title}`}
-        className="absolute top-1/2 right-3 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-accent text-black opacity-0 shadow-xl transition group-hover:opacity-100 hover:scale-105 focus-visible:opacity-100"
+        className="absolute top-1/2 right-3 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-accent text-black opacity-0 shadow-xl transition group-hover:opacity-100 hover:scale-105 focus-visible:opacity-100 pointer-coarse:opacity-100"
       >
         {busy ? <Spinner className="h-5 w-5" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
       </button>

@@ -15,5 +15,5 @@
     "baseUrl": ".",
     "paths": { "@shared/*": ["src/shared/*"], "@renderer/*": ["src/renderer/*"] }
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*", "src/preload/api.d.ts"]
+  "include": ["src/renderer/**/*", "src/mobile/**/*", "src/shared/**/*", "src/preload/api.d.ts"]
 }

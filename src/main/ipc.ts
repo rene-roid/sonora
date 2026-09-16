@@ -10,14 +10,9 @@ import {
   type Settings,
   type SettingsPatch
 } from '@shared/types'
-import {
-  SubsonicClient,
-  credentialsFromPassword,
-  normalizeServerUrl,
-  pickFastestServer,
-  probeServers,
-  type ServerProbe
-} from '@shared/subsonic/client'
+import { normalizeServerUrl, probeServers, type ServerProbe } from '@shared/subsonic/client'
+import { loginSession, reselectServer, sameAccount, withServerList } from '@shared/auth'
+import { applyPlayerEvent } from '@shared/playerState'
 import * as artCache from './artCache'
 import * as audioCache from './audioCache'
 import { setAutoLaunch } from './autolaunch'
@@ -53,47 +48,13 @@ export function setPlayerHooks(h: Hooks): void {
 }
 
 function applyEvent<K extends PlayerEventName>(event: K, payload: PlayerEvents[K]): void {
-  switch (event) {
-    case 'hostReady':
-      playerState.hostReady = (payload as PlayerEvents['hostReady']).ready
-      break
-    case 'trackChanged': {
-      const p = payload as PlayerEvents['trackChanged']
-      playerState.track = p.track
-      playerState.index = p.index
-      playerState.position = 0
-      playerState.duration = p.track?.duration ?? 0
-      break
-    }
-    case 'playStateChanged':
-      playerState.playing = (payload as PlayerEvents['playStateChanged']).playing
-      break
-    case 'positionUpdate': {
-      const p = payload as PlayerEvents['positionUpdate']
-      playerState.position = p.position
-      playerState.duration = p.duration
-      break
-    }
-    case 'queueChanged': {
-      const p = payload as PlayerEvents['queueChanged']
-      playerState.queue = p.queue
-      playerState.index = p.index
-      break
-    }
-    case 'volumeChanged': {
-      const p = payload as PlayerEvents['volumeChanged']
-      playerState.volume = p.volume
-      playerState.muted = p.muted
-      updateSettings({ volume: p.volume, muted: p.muted })
-      break
-    }
-    case 'modeChanged': {
-      const p = payload as PlayerEvents['modeChanged']
-      playerState.repeat = p.repeat
-      playerState.shuffle = p.shuffle
-      updateSettings({ repeat: p.repeat, shuffle: p.shuffle })
-      break
-    }
+  applyPlayerEvent(playerState, event, payload)
+  if (event === 'volumeChanged') {
+    const p = payload as PlayerEvents['volumeChanged']
+    updateSettings({ volume: p.volume, muted: p.muted })
+  } else if (event === 'modeChanged') {
+    const p = payload as PlayerEvents['modeChanged']
+    updateSettings({ repeat: p.repeat, shuffle: p.shuffle })
   }
 }
 
@@ -118,12 +79,8 @@ function activate(session: Session, server: string): Session {
 /** Ping all candidates and switch to whichever answers first. Keeps the current pick if none do. */
 async function reselect(): Promise<Session | null> {
   const session = loadSession()
-  if (!session || (session.servers?.length ?? 0) < 2) return session
-  try {
-    return activate(session, await pickFastestServer(session, session.servers!))
-  } catch {
-    return session // nothing answered; leave the pick alone so a flaky network is not destructive
-  }
+  if (!session) return null
+  return activate(session, (await reselectServer(session)).server)
 }
 
 export function setupIpc(): void {
@@ -160,17 +117,8 @@ export function setupIpc(): void {
   ipcMain.handle(
     'auth:login',
     async (_e, input: { server: string; username: string; password: string }): Promise<Session> => {
-      const server = normalizeServerUrl(input.server)
-      const session: Session = {
-        server,
-        servers: [server],
-        username: input.username.trim(),
-        ...credentialsFromPassword(input.password)
-      }
-      const client = new SubsonicClient(session)
-      await client.ping() // throws SubsonicError on bad credentials / unreachable server
-      const previous = loadSession()
-      if (previous?.username !== session.username || previous.server !== session.server) {
+      const session = await loginSession(input)
+      if (!sameAccount(loadSession(), session)) {
         // Recents, saved mixes and picked backgrounds all belong to the account that left.
         broadcast('settings:changed', [updateSettings({ recents: [], savedMixes: [] })])
         void artCache.clear()
@@ -185,9 +133,8 @@ export function setupIpc(): void {
   ipcMain.handle('auth:setServers', async (_e, urls: string[]): Promise<Session | null> => {
     const session = loadSession()
     if (!session) return null
-    const servers = [...new Set(urls.map(normalizeServerUrl).filter(Boolean))]
-    if (servers.length === 0) return session
-    const next: Session = { ...session, servers, server: servers.includes(session.server) ? session.server : servers[0] }
+    const next = withServerList(session, urls)
+    if (!next) return session
     saveSession(next)
     broadcast('auth:changed', [next])
     return (await reselect()) ?? next

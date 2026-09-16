@@ -158,6 +158,8 @@ export type View =
   | { name: 'search'; query: string }
   | { name: 'favorites' }
   | { name: 'settings' }
+  /** Phone-only: the sidebar's links as a page. */
+  | { name: 'library' }
 
 /** Identity of a view, for deduping the shelf. */
 export function viewKey(v: View): string {

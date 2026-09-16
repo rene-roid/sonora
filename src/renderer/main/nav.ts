@@ -10,6 +10,8 @@ interface NavState {
   view: View
   showQueue: boolean
   showLyrics: boolean
+  /** Phone-only full-screen player. */
+  showFullPlayer: boolean
 }
 
 export const useNav = create<NavState>(() => ({
@@ -17,14 +19,15 @@ export const useNav = create<NavState>(() => ({
   cursor: 0,
   view: { name: 'home' },
   showQueue: false,
-  showLyrics: false
+  showLyrics: false,
+  showFullPlayer: false
 }))
 
 export const nav = {
   go(view: View): void {
     useNav.setState((s) => {
       const history = [...s.history.slice(0, s.cursor + 1), view]
-      return { history, cursor: history.length - 1, view, showLyrics: false }
+      return { history, cursor: history.length - 1, view, showLyrics: false, showFullPlayer: false }
     })
   },
   back(): void {
@@ -41,10 +44,14 @@ export const nav = {
       return { cursor, view: s.history[cursor], showLyrics: false }
     })
   },
+  // Queue and lyrics sit under the full-screen player, so opening either closes it.
   toggleQueue(): void {
-    useNav.setState((s) => ({ showQueue: !s.showQueue }))
+    useNav.setState((s) => ({ showQueue: !s.showQueue, showFullPlayer: false }))
   },
   toggleLyrics(): void {
-    useNav.setState((s) => ({ showLyrics: !s.showLyrics }))
+    useNav.setState((s) => ({ showLyrics: !s.showLyrics, showFullPlayer: false }))
+  },
+  toggleFullPlayer(): void {
+    useNav.setState((s) => ({ showFullPlayer: !s.showFullPlayer }))
   }
 }

@@ -30,7 +30,7 @@ export function Login() {
     <div className="flex h-full flex-col bg-surface">
       <div className="drag h-9 shrink-0" />
       <div className="flex flex-1 items-center justify-center">
-        <form onSubmit={submit} className="w-[380px] rounded-xl border border-stroke bg-surface-2 p-8 shadow-2xl">
+        <form onSubmit={submit} className="mx-4 w-full max-w-[380px] rounded-xl border border-stroke bg-surface-2 p-8 shadow-2xl">
           <div className="mb-6">
             <div className="text-2xl font-extrabold tracking-tight">Sonora</div>
             <div className="mt-1 text-sm text-ink-2">Connect to your Navidrome server</div>
@@ -62,8 +62,8 @@ export function Login() {
             {busy ? <Spinner className="h-4 w-4 border-black/20 border-t-black" /> : 'Sign in'}
           </button>
           <p className="mt-4 text-[11px] leading-relaxed text-ink-3">
-            Your password is used once to derive a salted Subsonic token. Only that token is stored, encrypted with the
-            Windows credential store.
+            Your password is used once to derive a salted Subsonic token. Only that token is stored
+            {window.sonora.mobile ? ' on this device' : ', encrypted with the OS credential store'}.
           </p>
         </form>
       </div>

@@ -4,6 +4,7 @@ import { registerArtProtocol, registerArtScheme } from './artCache'
 import { setupIpc, setPlayerHooks, sendCommand, playerState } from './ipc'
 import { flushSettings, getSettings, onSettingsChange, updateSettings } from './store'
 import { sanitizeResume } from '@shared/types'
+import { resumeKey } from '@shared/playerState'
 import { loadSession } from './credentials'
 import { createTray, rebuildTrayMenu } from './tray'
 import {
@@ -133,17 +134,6 @@ app.whenReady().then(() => {
 })
 
 let lastResume = ''
-
-/**
- * Cheap stand-in for the resume state's identity. Serialising the queue to compare it would walk
- * every track on every checkpoint, and the queue is the one part of it that only ever changes
- * wholesale, so its length and ends identify it well enough to skip an unchanged write.
- */
-function resumeKey(r: ReturnType<typeof sanitizeResume>): string {
-  if (!r) return ''
-  const { queue, index, position } = r
-  return `${queue.length}|${queue[0]?.id ?? ''}|${queue[queue.length - 1]?.id ?? ''}|${index}|${Math.round(position)}`
-}
 
 /** Snapshot the resume point, skipping the write when nothing moved since the last one. */
 function saveResume(): void {

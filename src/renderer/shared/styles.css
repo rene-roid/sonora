@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* The mobile build's Vite root is src/mobile; the classes live here and in src/mobile. */
+@source '../';
+@source '../../mobile';
 
 @theme {
   --font-sans: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
@@ -26,7 +29,11 @@
     color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
     user-select: none;
+    -webkit-touch-callout: none;
     overflow: hidden;
+    /* Notch and gesture bar on phones; zero everywhere else. */
+    box-sizing: border-box;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   ::-webkit-scrollbar {
     width: 10px;
@@ -167,5 +174,16 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Finger-sized targets and a visible slider thumb on touch screens. */
+@media (pointer: coarse) {
+  .icon-btn {
+    min-height: 40px;
+    min-width: 40px;
+  }
+  .range::-webkit-slider-thumb {
+    opacity: 1;
   }
 }

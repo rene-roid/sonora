@@ -3,6 +3,8 @@ import { useNav } from './nav'
 import { TitleBar } from './TitleBar'
 import { Sidebar } from './Sidebar'
 import { NowPlayingBar } from './NowPlayingBar'
+import { BottomTabs } from './BottomTabs'
+import { FullPlayer } from './FullPlayer'
 import { QueuePanel } from './views/QueuePanel'
 import { LyricsView } from './views/LyricsView'
 import { Home } from './views/Home'
@@ -58,12 +60,15 @@ function Content() {
       return <Favorites />
     case 'settings':
       return <SettingsView />
+    case 'library':
+      return <Sidebar asPage />
   }
 }
 
 export function Shell() {
   const showQueue = useNav((s) => s.showQueue)
   const showLyrics = useNav((s) => s.showLyrics)
+  const showFullPlayer = useNav((s) => s.showFullPlayer)
   const view = useNav((s) => s.view)
 
   // Space toggles playback unless typing in an input.
@@ -89,7 +94,7 @@ export function Shell() {
       <div className="flex min-h-0 flex-1">
         <Sidebar />
         <main className="relative min-w-0 flex-1 overflow-hidden bg-gradient-to-b from-surface-2 to-surface">
-          <div key={JSON.stringify(view)} className="h-full overflow-y-auto p-6 pb-10">
+          <div key={JSON.stringify(view)} className="h-full overflow-y-auto p-4 pb-10 md:p-6 md:pb-10">
             <Content />
           </div>
           {showLyrics && <LyricsView />}
@@ -97,6 +102,8 @@ export function Shell() {
         {showQueue && <QueuePanel />}
       </div>
       <NowPlayingBar />
+      <BottomTabs />
+      {showFullPlayer && <FullPlayer />}
       <NewPlaylistDialog />
     </div>
   )

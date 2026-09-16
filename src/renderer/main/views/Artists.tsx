@@ -20,7 +20,7 @@ export function Artists() {
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder="Filter artists"
-        className="mb-5 h-8 w-[280px] rounded-full border border-white/10 bg-white/[0.06] px-4 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-accent"
+        className="mb-5 h-8 w-full rounded-full md:w-[280px] border border-white/10 bg-white/[0.06] px-4 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-accent"
       />
       {state.loading && <Loading />}
       {state.error && <ErrorBox message={state.error} onRetry={state.reload} />}

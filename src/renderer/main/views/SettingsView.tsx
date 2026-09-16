@@ -545,11 +545,14 @@ export function SettingsView() {
   }
   const widget = (key: keyof Settings['widgets'], value: boolean): void =>
     update({ widgets: { ...settings.widgets, [key]: value } })
+  // Overlays, disk caches, tray and autolaunch are desktop-only.
+  const mobile = window.sonora.mobile
 
   return (
     <div className="max-w-2xl">
       <PageTitle title="Settings" subtitle={`Signed in as ${session?.username} · ${session?.server}`} />
 
+      {!mobile && (
       <section className="mb-8">
         <SectionHeader title="Widgets" />
         <Toggle
@@ -571,6 +574,7 @@ export function SettingsView() {
           onChange={(v) => widget('toast', v)}
         />
       </section>
+      )}
 
       {settings.widgets.taskbar && (
         <TaskbarWidgetSettings value={settings.widget} onChange={(patch) => update({ widget: patch })} />
@@ -600,10 +604,11 @@ export function SettingsView() {
         />
       </section>
 
-      <SongCache maxGb={settings.cacheMaxGb} onChange={(cacheMaxGb) => update({ cacheMaxGb })} />
+      {!mobile && <SongCache maxGb={settings.cacheMaxGb} onChange={(cacheMaxGb) => update({ cacheMaxGb })} />}
 
-      <ImageCache maxMb={settings.artCacheMaxMb} onChange={(artCacheMaxMb) => update({ artCacheMaxMb })} />
+      {!mobile && <ImageCache maxMb={settings.artCacheMaxMb} onChange={(artCacheMaxMb) => update({ artCacheMaxMb })} />}
 
+      {!mobile && (
       <section className="mb-8">
         <SectionHeader title="Behaviour" />
         <Toggle
@@ -625,6 +630,7 @@ export function SettingsView() {
           onChange={(v) => update({ autoLaunch: v })}
         />
       </section>
+      )}
 
       {session && <Connections session={session} />}
 
@@ -632,7 +638,7 @@ export function SettingsView() {
         <SectionHeader title="Account" />
         <div className="flex items-center gap-3 px-3">
           <GhostButton onClick={() => void window.sonora.auth.logout()}>Sign out</GhostButton>
-          <span className="text-xs text-ink-3">Removes the stored token from the Windows credential store.</span>
+          <span className="text-xs text-ink-3">{mobile ? 'Removes the stored token from this device.' : 'Removes the stored token from the Windows credential store.'}</span>
         </div>
       </section>
 

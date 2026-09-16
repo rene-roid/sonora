@@ -32,6 +32,8 @@ const api = {
   windowName,
   /** Windows 11 22H2+; decides whether the widget's acrylic mode gets a real system backdrop. */
   nativeAcrylic: supportsNativeAcrylic(process.platform, release()),
+  /** True in the Capacitor build, where the overlays, caches and window chrome do not exist. */
+  mobile: false,
 
   player: {
     on<K extends PlayerEventName>(event: K, cb: (payload: PlayerEvents[K]) => void): Unsubscribe {

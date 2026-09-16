@@ -24,6 +24,22 @@ widget with a live audio visualiser.
 
 ---
 
+## Android
+
+The same app ships as an APK, built with [Capacitor](https://capacitorjs.com/) from the same
+source tree. It gets the library, playback, queue, lyrics, mixes and lockscreen/headset controls;
+the desktop-only overlays (toasts, mini-player, taskbar widget) and the disk caches are not
+part of it.
+
+```sh
+bun run mobile:build   # bundle the web app and sync it into android/
+bun run mobile:apk     # + gradle assembleDebug -> android/app/build/outputs/apk/debug/
+bun run mobile:dev     # vite dev server; point capacitor.config.ts `server.url` at it for live reload
+```
+
+Needs a JDK 17+ and the Android SDK (`ANDROID_HOME`). Release builds are signed in CI from the
+`ANDROID_KEYSTORE_B64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` secrets.
+
 ## Screenshots
 
 <table>

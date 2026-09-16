@@ -20,13 +20,20 @@
     "test": "bun test",
     "icons": "bun run scripts/gen-icons.ts",
     "dist": "bun run icons && electron-vite build && electron-builder --config electron-builder.yml",
-    "dist:dir": "bun run icons && electron-vite build && electron-builder --dir --config electron-builder.yml"
+    "dist:dir": "bun run icons && electron-vite build && electron-builder --dir --config electron-builder.yml",
+    "mobile:dev": "vite -c vite.mobile.config.ts --host",
+    "mobile:build": "vite build -c vite.mobile.config.ts && cap sync android",
+    "mobile:apk": "bun run mobile:build && cd android && ./gradlew assembleDebug",
+    "mobile:open": "cap open android"
   },
   "trustedDependencies": [
     "electron",
     "esbuild"
   ],
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/preferences": "^8.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "@fluentui/tokens": "^1.0.0-alpha.21",
     "electron-store": "^8.2.0",
@@ -37,6 +44,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@tailwindcss/vite": "^4.0.0",
     "@types/bun": "^1.4.2",
     "@types/node": "^22.10.0",

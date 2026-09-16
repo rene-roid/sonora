@@ -18,6 +18,7 @@ import { formatTime } from '@shared/format'
 import { Cover } from '@renderer/shared/Cover'
 import { player, usePlayerState } from '@renderer/shared/playerStore'
 import { useClient } from '@renderer/shared/sessionStore'
+import { touch } from '@renderer/shared/touch'
 import { nav } from '../nav'
 import { playFrom } from '../recents'
 import { playlists, usePlaylistsRevision } from '../playlists'
@@ -182,6 +183,7 @@ const TrackRow = memo(function TrackRow({
   return (
     <div
       onDoubleClick={() => onPlay(i)}
+      onClick={touch ? () => onPlay(i) : undefined}
       onContextMenu={(e) => onMenu(e, i)}
       style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 56px' }}
       className={`group grid grid-cols-[40px_1fr_auto] items-center gap-3 rounded-md px-3 py-1.5 hover:bg-white/[0.06] md:grid-cols-[40px_1fr_1fr_110px_60px] ${

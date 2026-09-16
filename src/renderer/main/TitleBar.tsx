@@ -30,17 +30,17 @@ export function TitleBar() {
   }, [query])
 
   return (
-    <header className="drag flex h-9 shrink-0 items-center gap-2 bg-surface pl-3 pr-[140px] text-sm">
-      <div className="mr-2 text-[13px] font-bold tracking-tight">Sonora</div>
+    <header className="drag flex h-11 shrink-0 items-center gap-2 bg-surface px-3 text-sm md:h-9 md:pr-[140px]">
+      <div className="mr-2 hidden text-[13px] font-bold tracking-tight md:block">Sonora</div>
       <div className="no-drag flex items-center gap-0.5">
         <button className="icon-btn h-7 w-7" onClick={nav.back} disabled={cursor === 0} title="Back">
           <ChevronLeft size={16} />
         </button>
-        <button className="icon-btn h-7 w-7" onClick={nav.forward} disabled={cursor >= historyLength - 1} title="Forward">
+        <button className="icon-btn hidden h-7 w-7 md:inline-flex" onClick={nav.forward} disabled={cursor >= historyLength - 1} title="Forward">
           <ChevronRight size={16} />
         </button>
       </div>
-      <div className="no-drag relative ml-2 w-[320px]">
+      <div className="no-drag relative ml-2 min-w-0 flex-1 md:w-[320px] md:flex-none">
         <Search size={14} className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ink-3" />
         <input
           value={query}

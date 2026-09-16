@@ -77,7 +77,8 @@ function NavItem({ view, icon, before, label }: { view: View; icon: ReactNode; b
   )
 }
 
-export function Sidebar() {
+/** `asPage`: rendered as the phone's Library view instead of a desktop side column. */
+export function Sidebar({ asPage = false }: { asPage?: boolean }) {
   const client = useClient()
   const session = useSessionStore((s) => s.session)
   const revision = usePlaylistsRevision()
@@ -85,7 +86,7 @@ export function Sidebar() {
   const online = useServerStatus(client)
 
   return (
-    <aside className="flex w-[232px] shrink-0 flex-col border-r border-stroke bg-surface">
+    <aside className={asPage ? 'flex w-full flex-col' : 'hidden w-[232px] shrink-0 flex-col border-r border-stroke bg-surface md:flex'}>
       <nav className="space-y-0.5 p-2 pt-1">
         <NavItem view={{ name: 'home' }} icon={<Home size={16} />} label="Home" />
         <NavItem view={{ name: 'albums' }} icon={<Disc3 size={16} />} label="Albums" />
